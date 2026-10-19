@@ -18,6 +18,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     apiBase,
     ttlockClientId,
     router: {},
+    eas: {
+      projectId: '2a1b1e36-7d9c-4916-aea8-eeae6ff6cfe5',
+    },
   },
   android: {
     package: 'com.checkinhousing.locksetup',
