@@ -22,12 +22,7 @@ import { Button } from '@/src/components/ui/Button';
 import { useBootstrap, useInvalidateBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
 import { showUserErrorAlert } from '@/src/api/formatApiError';
-import { LockPayloadConfirmModal } from '@/src/components/LockPayloadConfirmModal';
-import {
-  buildRegisterPayload,
-  provisionAndLink,
-  type RegisterLockPayload,
-} from '@/src/services/provisionService';
+import { buildRegisterPayload, provisionAndLink } from '@/src/services/provisionService';
 import { unlockWithLock } from '@/src/services/unlockService';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
@@ -55,7 +50,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
   const [showScan, setShowScan] = useState(false);
   const [linkSheet, setLinkSheet] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [pendingRegister, setPendingRegister] = useState<RegisterLockPayload | null>(null);
+  const [unlockBusy, setUnlockBusy] = useState(false);
 
   const entity = useMemo(
     () => getPropertyEntity(bootstrap, propertyType, propertyId),
@@ -116,24 +111,11 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
     setBusy(true);
     try {
       const payload = buildRegisterPayload(aliasForProvision(), lockData, device);
-      setPendingRegister(payload);
-      setShowScan(false);
-    } catch (e) {
-      showUserErrorAlert(t, e, 'provision');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirmProvision = async () => {
-    if (!pendingRegister) return;
-    setBusy(true);
-    try {
-      await provisionAndLink(propertyType, propertyId, pendingRegister);
-      setPendingRegister(null);
+      await provisionAndLink(propertyType, propertyId, payload);
       await invalidate();
       await refetchBootstrap();
       await refetchDetail();
+      setShowScan(false);
       Alert.alert(t('done'), t('linkSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'provision');
@@ -171,12 +153,15 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
 
   const onUnlock = async () => {
     const cloudLock = lock ?? cloudLockFromApiLock(primaryLock);
+    setUnlockBusy(true);
     try {
       await unlockWithLock(cloudLock);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('done'), t('unlockSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'unlock');
+    } finally {
+      setUnlockBusy(false);
     }
   };
 
@@ -301,7 +286,12 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
       <View style={styles.actions}>
         {hasLock && primaryLock ? (
           <>
-            <Button label={t('unlock')} onPress={() => void onUnlock()} />
+            <Button
+              label={t('unlock')}
+              loading={unlockBusy}
+              disabled={unlockBusy || busy}
+              onPress={() => void onUnlock()}
+            />
             <Button label={t('detailOpenLock')} variant="ghost" onPress={goToLockDetail} />
             <Button label={t('unlinkLock')} variant="danger" loading={busy} onPress={onUnlink} />
           </>
@@ -407,23 +397,6 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
           void refetchDetail();
           Alert.alert(t('done'), t('linkSuccess'));
         }}
-      />
-      <LockPayloadConfirmModal
-        visible={pendingRegister !== null}
-        title={t('registerPayloadTitle')}
-        payload={
-          pendingRegister
-            ? {
-                api: 'POST /api/lock-setup/tenants/{tenant}/locks then link',
-                propertyType,
-                propertyId,
-                body: pendingRegister,
-              }
-            : {}
-        }
-        loading={busy}
-        onCancel={() => setPendingRegister(null)}
-        onConfirm={() => void confirmProvision()}
       />
     </>
   );

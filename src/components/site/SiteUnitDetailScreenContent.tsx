@@ -20,12 +20,7 @@ import { ScanLocksPanel } from '@/src/components/ScanLocksPanel';
 import { Button } from '@/src/components/ui/Button';
 import { useBootstrap, useInvalidateBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
-import { LockPayloadConfirmModal } from '@/src/components/LockPayloadConfirmModal';
-import {
-  buildRegisterPayload,
-  provisionAndLink,
-  type RegisterLockPayload,
-} from '@/src/services/provisionService';
+import { buildRegisterPayload, provisionAndLink } from '@/src/services/provisionService';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import { appStyles } from '@/src/theme/styles';
@@ -61,7 +56,6 @@ export function SiteUnitDetailScreenContent({ propertyType, unitId }: Props) {
   const [showScan, setShowScan] = useState(false);
   const [linkSheet, setLinkSheet] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [pendingRegister, setPendingRegister] = useState<RegisterLockPayload | null>(null);
 
   const unit = useMemo(
     () => findSiteUnit(bootstrap, propertyType, unitId),
@@ -155,24 +149,11 @@ export function SiteUnitDetailScreenContent({ propertyType, unitId }: Props) {
     setBusy(true);
     try {
       const payload = buildRegisterPayload(lockAlias(), lockData, device);
-      setPendingRegister(payload);
-      setShowScan(false);
-    } catch (e) {
-      showUserErrorAlert(t, e, 'provision');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirmProvision = async () => {
-    if (!pendingRegister) return;
-    setBusy(true);
-    try {
-      await provisionAndLink(propertyType as PropertyType, unitId, pendingRegister);
-      setPendingRegister(null);
+      await provisionAndLink(propertyType as PropertyType, unitId, payload);
       await invalidate();
       await refetchBootstrap();
       await refetchDetail();
+      setShowScan(false);
       Alert.alert(t('done'), t('linkSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'provision');
@@ -290,23 +271,6 @@ export function SiteUnitDetailScreenContent({ propertyType, unitId }: Props) {
           setLinkSheet(false);
           Alert.alert(t('done'), t('linkSuccess'));
         }}
-      />
-      <LockPayloadConfirmModal
-        visible={pendingRegister !== null}
-        title={t('registerPayloadTitle')}
-        payload={
-          pendingRegister
-            ? {
-                api: 'POST register + link',
-                propertyType,
-                propertyId: unitId,
-                body: pendingRegister,
-              }
-            : {}
-        }
-        loading={busy}
-        onCancel={() => setPendingRegister(null)}
-        onConfirm={() => void confirmProvision()}
       />
     </>
   );

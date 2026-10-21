@@ -30,26 +30,22 @@ export default function FacilitiesTab() {
   const { tenantId } = useSession();
   const { data, isLoading, refetch, isRefetching } = useBootstrap(tenantId);
   const facilities = data?.facilities ?? [];
+  const [unlockingId, setUnlockingId] = React.useState<number | null>(null);
 
   const longPressUnlock = (facility: (typeof facilities)[0]) => {
-    if (!facility.lock) return;
-    Alert.alert(t('unlock'), facilityDisplayName(facility, i18nInstance.language), [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: t('unlock'),
-        onPress: () => {
-          void (async () => {
-            try {
-              await unlockWithLock(facility.lock);
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert(t('done'), t('unlockSuccess'));
-            } catch (e) {
-              showUserErrorAlert(t, e, 'unlock');
-            }
-          })();
-        },
-      },
-    ]);
+    if (!facility.lock || unlockingId !== null) return;
+    void (async () => {
+      setUnlockingId(facility.id);
+      try {
+        await unlockWithLock(facility.lock);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(t('done'), t('unlockSuccess'));
+      } catch (e) {
+        showUserErrorAlert(t, e, 'unlock');
+      } finally {
+        setUnlockingId(null);
+      }
+    })();
   };
 
   if (isLoading) {
@@ -82,6 +78,7 @@ export default function FacilitiesTab() {
             }}
             onLongPress={() => longPressUnlock(item)}
             delayLongPress={400}
+            disabled={unlockingId !== null}
           >
             <View style={styles.iconWrap}>
               <Ionicons name="fitness-outline" size={20} color={colors.accent} />
@@ -99,7 +96,11 @@ export default function FacilitiesTab() {
                 color={item.has_lock ? colors.success : colors.muted}
               />
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            {unlockingId === item.id ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            )}
           </Pressable>
         );
       }}

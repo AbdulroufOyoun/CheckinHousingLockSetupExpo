@@ -46,6 +46,7 @@ export default function LockDetailScreen() {
   const { listContentStyle } = useResponsiveLayout();
   const invalidate = useInvalidateBootstrap();
   const [unlinkBusy, setUnlinkBusy] = useState(false);
+  const [unlockBusy, setUnlockBusy] = useState(false);
 
   const { data: lockDetail } = useQuery({
     queryKey: ['lock-detail', lockDbId],
@@ -106,12 +107,15 @@ export default function LockDetailScreen() {
   };
 
   const onUnlock = async () => {
+    setUnlockBusy(true);
     try {
       await unlockWithLock(apiLock);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('done'), t('unlockSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'unlock');
+    } finally {
+      setUnlockBusy(false);
     }
   };
 
@@ -128,7 +132,7 @@ export default function LockDetailScreen() {
             {t('detailAddedToSystem')}: {formatDateTime(lockDetail.added_to_system_at, i18n.language)}
           </Text>
         ) : null}
-        <Button label={t('unlock')} onPress={() => void onUnlock()} />
+        <Button label={t('unlock')} loading={unlockBusy} onPress={() => void onUnlock()} />
         {canUnlinkFromProperty ? (
           <Button label={t('unlinkLock')} variant="danger" loading={unlinkBusy} onPress={onUnlink} />
         ) : null}
