@@ -56,7 +56,7 @@ export function applyBootstrapLock<T extends { locks: ApiLock[]; has_lock: boole
         lockName: api.lockName,
         lockMac: api.lockMac,
         lockAlias: api.lockAlias,
-        lockData: '',
+        lockData: api.lockData ?? '',
         dbId: api.id,
       },
       cloudList,

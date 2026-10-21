@@ -1,5 +1,4 @@
-import { fetchTtlockToken, linkLock, registerLock } from '@/src/api/lockSetupClient';
-import { resolveCloudLockId } from '@/src/api/ttlockCloud';
+import { linkLock, registerLock } from '@/src/api/lockSetupClient';
 import type { PropertyType } from '@/src/types/models';
 import type { ScannedLock } from '@/src/ble/ttlockBridge';
 
@@ -12,25 +11,19 @@ export type RegisterLockPayload = {
   electric_quantity: number;
 };
 
-export async function buildRegisterPayload(
+/** Register in tenant DB only (BLE lockData). No TTLock cloud initialize. */
+export function buildRegisterPayload(
   lockAlias: string,
   lockData: string,
   device: Pick<ScannedLock, 'lockMac' | 'lockName' | 'electricQuantity'>,
   lockName?: string,
-): Promise<RegisterLockPayload> {
-  const { access_token } = await fetchTtlockToken();
-  const cloudLockId = await resolveCloudLockId(
-    lockData,
-    lockAlias,
-    device.lockMac,
-    access_token,
-  );
-
+): RegisterLockPayload {
+  const hex = device.lockMac.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
   return {
     lock_data: lockData,
     lock_mac: device.lockMac,
     lock_alias: lockAlias,
-    lock_id: cloudLockId,
+    lock_id: `local:${hex}`,
     lock_name: lockName ?? device.lockName ?? lockAlias,
     electric_quantity: device.electricQuantity,
   };

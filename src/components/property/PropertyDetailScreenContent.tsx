@@ -33,7 +33,8 @@ import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import { appStyles } from '@/src/theme/styles';
 import { elevation, radii, spacing } from '@/src/theme/tokens';
-import type { CloudLock, PropertyType } from '@/src/types/models';
+import type { PropertyType } from '@/src/types/models';
+import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 import { facilityDisplayName } from '@/src/utils/lockMerge';
 import { getPropertyEntity, siteUnitTitle } from '@/src/utils/bootstrapLookup';
 import { formatDateTime } from '@/src/utils/formatDateTime';
@@ -114,7 +115,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
     if (hasLock) return;
     setBusy(true);
     try {
-      const payload = await buildRegisterPayload(aliasForProvision(), lockData, device);
+      const payload = buildRegisterPayload(aliasForProvision(), lockData, device);
       setPendingRegister(payload);
       setShowScan(false);
     } catch (e) {
@@ -169,16 +170,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
   };
 
   const onUnlock = async () => {
-    const cloudLock: CloudLock | undefined = lock ?? (primaryLock
-      ? {
-          dbId: primaryLock.id,
-          lockId: primaryLock.lockId,
-          lockName: primaryLock.lockName,
-          lockAlias: primaryLock.lockAlias,
-          lockMac: primaryLock.lockMac ?? '',
-          lockData: '',
-        }
-      : undefined);
+    const cloudLock = lock ?? cloudLockFromApiLock(primaryLock);
     try {
       await unlockWithLock(cloudLock);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

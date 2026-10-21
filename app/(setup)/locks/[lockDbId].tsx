@@ -59,7 +59,7 @@ export default function LockDetailScreen() {
     lockMac: lockDetail?.lockMac ?? params.lockMac ?? '',
     lockAlias: lockDetail?.lockAlias ?? params.title ?? '',
     lockName: lockDetail?.lockName ?? params.title ?? '',
-    lockData: '',
+    lockData: lockDetail?.lockData ?? '',
   };
 
   const historyQuery = useInfiniteQuery({

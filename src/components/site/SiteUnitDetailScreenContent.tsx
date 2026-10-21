@@ -154,7 +154,7 @@ export function SiteUnitDetailScreenContent({ propertyType, unitId }: Props) {
     if (hasLock) return;
     setBusy(true);
     try {
-      const payload = await buildRegisterPayload(lockAlias(), lockData, device);
+      const payload = buildRegisterPayload(lockAlias(), lockData, device);
       setPendingRegister(payload);
       setShowScan(false);
     } catch (e) {

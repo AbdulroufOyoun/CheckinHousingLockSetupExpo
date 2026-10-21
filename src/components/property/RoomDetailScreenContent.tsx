@@ -125,7 +125,7 @@ export function RoomDetailScreenContent({ roomId }: Props) {
     if (hasLock) return;
     setBusy(true);
     try {
-      const payload = await buildRegisterPayload(`${title}Lock`, lockData, device);
+      const payload = buildRegisterPayload(`${title}Lock`, lockData, device);
       setPendingRegister(payload);
       setShowScan(false);
     } catch (e) {

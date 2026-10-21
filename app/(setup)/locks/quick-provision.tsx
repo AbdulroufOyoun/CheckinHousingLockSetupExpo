@@ -42,7 +42,7 @@ export default function QuickProvisionScreen() {
             setBusy(true);
             try {
               const alias = `Lock_${Date.now()}`;
-              const payload = await buildRegisterPayload(alias, lockData, device);
+              const payload = buildRegisterPayload(alias, lockData, device);
               setPending(payload);
             } catch (e) {
               showUserErrorAlert(t, e, 'provision');
