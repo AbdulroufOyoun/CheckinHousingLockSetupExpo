@@ -70,7 +70,3 @@ export function getTtlockClientId(): string {
   return fromExtra ?? process.env.EXPO_PUBLIC_TTLOCK_CLIENT_ID ?? DEFAULT_TTLOCK_CLIENT_ID;
 }
 
-/** Server URL is baked into the repo; login screen does not require editing it. */
-export function isApiBasePreconfigured(): boolean {
-  return Boolean(getApiBase());
-}

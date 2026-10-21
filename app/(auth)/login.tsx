@@ -14,12 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatUserErrorMessage } from '@/src/api/formatApiError';
 import { loginLockSetup, normalizeMobileInput } from '@/src/api/lockSetupClient';
-import {
-  getApiBase,
-  isApiBasePreconfigured,
-  isEmulatorOnlyApiHost,
-  normalizeApiRoot,
-} from '@/src/config/env';
+import { getApiBase, isEmulatorOnlyApiHost, normalizeApiRoot } from '@/src/config/env';
 import Constants from 'expo-constants';
 import { LoginHero } from '@/src/components/auth/LoginHero';
 import { Button } from '@/src/components/ui/Button';
@@ -35,18 +30,19 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { isWideLayout, scrollContentStyle } = useResponsiveLayout();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
-  const { signIn, setApiBase } = useSession();
+  const { ready, signIn, setApiBase } = useSession();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
-  const apiPreconfigured = isApiBasePreconfigured();
-  const [apiUrl, setApiUrl] = useState(getApiBase());
+  const [apiUrl, setApiUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    setApiUrl(getApiBase());
-  }, []);
+    if (ready) {
+      setApiUrl(getApiBase());
+    }
+  }, [ready]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -76,7 +72,7 @@ export default function LoginScreen() {
       setError(t('loginError'));
       return;
     }
-    const base = normalizeApiRoot(apiPreconfigured ? getApiBase() : apiUrl);
+    const base = normalizeApiRoot(apiUrl);
     if (!base) {
       setError(t('apiBaseRequired'));
       return;
@@ -125,20 +121,16 @@ export default function LoginScreen() {
         onSubmitEditing={() => void submit()}
         returnKeyType="done"
       />
-      {!apiPreconfigured ? (
-        <>
-          <TextField
-            label={t('apiBaseLabel')}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            value={apiUrl}
-            onChangeText={setApiUrl}
-            onFocus={scrollFocusedFieldIntoView}
-          />
-          <Text style={styles.apiHint}>{t('apiBaseHint')}</Text>
-        </>
-      ) : null}
+      <TextField
+        label={t('apiBaseLabel')}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        value={apiUrl}
+        onChangeText={setApiUrl}
+        onFocus={scrollFocusedFieldIntoView}
+      />
+      <Text style={styles.apiHint}>{t('apiBaseHint')}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={t('login')} loading={loading} onPress={() => void submit()} />
     </View>
