@@ -70,16 +70,43 @@ export function enrichBootstrap(
   bootstrap: import('@/src/types/models').BootstrapData,
   cloudList: CloudLock[],
 ) {
-  const floors = bootstrap.floors.map((floor) => ({
-    ...floor,
-    rooms: floor.rooms.map((r) => applyBootstrapLock(r, cloudList)),
-    suites: floor.suites.map((s) => ({
-      ...applyBootstrapLock(s, cloudList),
-      rooms: s.rooms.map((r) => applyBootstrapLock(r, cloudList)),
-    })),
-  }));
-  const facilities = bootstrap.facilities.map((f) => applyBootstrapLock(f, cloudList));
-  return { ...bootstrap, floors, facilities };
+  const enrichSiteList = <T extends { locks: ApiLock[]; has_lock: boolean; lock?: CloudLock }>(
+    list: T[],
+  ): T[] => list.map((item) => applyBootstrapLock(item, cloudList));
+
+  const floors = (bootstrap.floors ?? []).map((floor) => {
+    const withFloorLock = floor.locks?.length
+      ? applyBootstrapLock(
+          {
+            locks: floor.locks,
+            has_lock: floor.has_lock ?? false,
+            lock: floor.lock,
+          },
+          cloudList,
+        )
+      : null;
+    return {
+      ...floor,
+      ...(withFloorLock
+        ? {
+            locks: withFloorLock.locks,
+            has_lock: withFloorLock.has_lock,
+            lock: withFloorLock.lock,
+          }
+        : {}),
+      rooms: (floor.rooms ?? []).map((r) => applyBootstrapLock(r, cloudList)),
+      suites: (floor.suites ?? []).map((s) => ({
+        ...applyBootstrapLock(s, cloudList),
+        rooms: (s.rooms ?? []).map((r) => applyBootstrapLock(r, cloudList)),
+      })),
+    };
+  });
+  const facilities = enrichSiteList(bootstrap.facilities ?? []);
+  const buildings = enrichSiteList(bootstrap.buildings ?? []);
+  const gates = enrichSiteList(bootstrap.gates ?? []);
+  const elevators = enrichSiteList(bootstrap.elevators ?? []);
+  const parkings = enrichSiteList(bootstrap.parkings ?? []);
+  return { ...bootstrap, floors, facilities, buildings, gates, elevators, parkings };
 }
 
 export function resolveLockData(

@@ -1,13 +1,63 @@
 import Constants from 'expo-constants';
 
+import { getApiBaseOverride } from '@/src/config/apiBaseOverride';
+
 function trimTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
+/** Strip accidental `/api` suffix (Platform env uses .../api). */
+export function normalizeApiRoot(base: string): string {
+  let b = base.trim();
+  if (!b) {
+    return b;
+  }
+  if (!/^https?:\/\//i.test(b)) {
+    b = `http://${b}`;
+  }
+  b = trimTrailingSlash(b);
+  if (b.endsWith('/api')) {
+    b = b.slice(0, -4);
+  }
+  return b;
+}
+
+/** Hosts that only work on Android emulator, not on a physical phone. */
+export function isEmulatorOnlyApiHost(base: string): boolean {
+  const normalized = normalizeApiRoot(base).toLowerCase();
+  return (
+    normalized.includes('10.0.2.2') ||
+    normalized.includes('127.0.0.1') ||
+    normalized.includes('localhost')
+  );
+}
+
+export function isProductionAppVariant(): boolean {
+  const fromExtra = Constants.expoConfig?.extra?.appVariant as string | undefined;
+  return (
+    fromExtra === 'production' ||
+    process.env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
+    process.env.EAS_BUILD_PROFILE === 'production'
+  );
+}
+
 export function getApiBase(): string {
+  const fromOverride = getApiBaseOverride();
+  if (fromOverride) {
+    return normalizeApiRoot(fromOverride);
+  }
+  const fromPublic = process.env.EXPO_PUBLIC_API_BASE;
+  if (fromPublic?.trim()) {
+    return normalizeApiRoot(fromPublic);
+  }
   const fromExtra = Constants.expoConfig?.extra?.apiBase as string | undefined;
-  const base = fromExtra ?? process.env.EXPO_PUBLIC_API_BASE ?? 'http://10.0.2.2:8000';
-  return trimTrailingSlash(base);
+  if (fromExtra?.trim()) {
+    return normalizeApiRoot(fromExtra);
+  }
+  if (isProductionAppVariant()) {
+    return '';
+  }
+  return 'http://10.0.2.2:8000';
 }
 
 export function getTtlockClientId(): string {

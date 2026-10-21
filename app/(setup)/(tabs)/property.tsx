@@ -1,145 +1,161 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
+import { PropertyFilterChips } from '@/src/components/property/PropertyFilterChips';
+import { PropertyFloorSection } from '@/src/components/property/PropertyFloorSection';
+import { PropertySearchBar } from '@/src/components/property/PropertySearchBar';
+import { PropertySummaryCard } from '@/src/components/property/PropertySummaryCard';
 import { PropertySkeleton } from '@/src/components/ui/Skeleton';
+import { EmptyState } from '@/src/components/ui/EmptyState';
+import { formatUserErrorMessage } from '@/src/api/formatApiError';
 import { useBootstrap } from '@/src/hooks/useBootstrap';
+import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import type { FloorSection, RoomModel, SuiteModel } from '@/src/types/models';
-
-function LockChip({ linked }: { linked: boolean }) {
-  return (
-    <View style={[styles.chip, linked ? styles.chipOn : styles.chipOff]}>
-      <Text style={styles.chipText}>{linked ? '🔒' : '—'}</Text>
-    </View>
-  );
-}
-
-function UnitTile({
-  title,
-  linked,
-  onPress,
-}: {
-  title: string;
-  linked: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.tile} onPress={onPress}>
-      <Text style={styles.tileTitle}>{title}</Text>
-      <LockChip linked={linked} />
-    </Pressable>
-  );
-}
-
-function FloorBlock({ floor }: { floor: FloorSection }) {
-  const [open, setOpen] = useState(true);
-  return (
-    <View style={styles.floor}>
-      <Pressable onPress={() => setOpen((v) => !v)} style={styles.floorHead}>
-        <Text style={styles.floorLabel}>{floor.label}</Text>
-        <Text style={styles.chevron}>{open ? '▾' : '▸'}</Text>
-      </Pressable>
-      {open ? (
-        <View style={styles.grid}>
-          {floor.suites.map((suite: SuiteModel) => (
-            <UnitTile
-              key={`suite-${suite.id}`}
-              title={`Suite ${suite.number}`}
-              linked={suite.has_lock}
-              onPress={() =>
-                router.push(`/(setup)/property/suite/${suite.id}`)
-              }
-            />
-          ))}
-          {floor.rooms.map((room: RoomModel) => (
-            <UnitTile
-              key={`room-${room.id}`}
-              title={String(room.number)}
-              linked={room.has_lock}
-              onPress={() => router.push(`/(setup)/property/room/${room.id}`)}
-            />
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
+import {
+  countPropertyUnits,
+  filterPropertyFloors,
+  type PropertyLockFilter,
+} from '@/src/utils/propertyStats';
 
 export default function PropertyTab() {
   const { t } = useTranslation();
+  const { listContentStyle } = useResponsiveLayout();
   const { tenantId } = useSession();
-  const { data, isLoading, refetch, isRefetching } = useBootstrap(tenantId);
+  const { data, isLoading, error, refetch, isRefetching } = useBootstrap(tenantId);
+
+  const [search, setSearch] = useState('');
+  const [lockFilter, setLockFilter] = useState<PropertyLockFilter>('all');
+  const [openByFloor, setOpenByFloor] = useState<Record<number, boolean>>({});
+
+  const allFloors = data?.floors ?? [];
+
+  const filteredFloors = useMemo(
+    () => filterPropertyFloors(allFloors, { query: search, lockFilter }),
+    [allFloors, search, lockFilter],
+  );
+
+  const stats = useMemo(() => countPropertyUnits(allFloors), [allFloors]);
+
+  const isFloorOpen = useCallback(
+    (floorId: number, index: number) => {
+      if (floorId in openByFloor) {
+        return openByFloor[floorId];
+      }
+      return index === 0;
+    },
+    [openByFloor],
+  );
+
+  const allExpanded = useMemo(() => {
+    if (filteredFloors.length === 0) return false;
+    return filteredFloors.every((f, i) => isFloorOpen(f.id, i));
+  }, [filteredFloors, isFloorOpen]);
+
+  const toggleFloor = useCallback((floorId: number, index: number) => {
+    setOpenByFloor((prev) => ({
+      ...prev,
+      [floorId]: !(floorId in prev ? prev[floorId] : index === 0),
+    }));
+  }, []);
+
+  const toggleExpandAll = useCallback(() => {
+    const nextExpanded = !allExpanded;
+    const next: Record<number, boolean> = {};
+    filteredFloors.forEach((f) => {
+      next[f.id] = nextExpanded;
+    });
+    setOpenByFloor(next);
+  }, [allExpanded, filteredFloors]);
 
   if (isLoading) {
     return <PropertySkeleton />;
   }
 
-  const floors = data?.floors ?? [];
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <EmptyState
+          icon="cloud-offline-outline"
+          title={t('errorGeneric')}
+          description={formatUserErrorMessage(error, t, 'sync')}
+          actionLabel={t('common.refresh')}
+          onAction={() => void refetch()}
+        />
+      </View>
+    );
+  }
+
+  const listHeader = (
+    <View style={styles.header}>
+      <PropertySummaryCard stats={stats} />
+      <PropertySearchBar value={search} onChangeText={setSearch} />
+      <PropertyFilterChips value={lockFilter} onChange={setLockFilter} />
+      {filteredFloors.length > 1 ? (
+        <Pressable onPress={toggleExpandAll} style={styles.expandAll}>
+          <Text style={styles.expandAllText}>
+            {allExpanded ? t('collapseAll') : t('expandAll')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
+    <FlatList
+      data={filteredFloors}
+      keyExtractor={(item) => String(item.id)}
+      contentContainerStyle={listContentStyle}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.accent} />
       }
-    >
-      {floors.length === 0 ? (
-        <Text style={styles.empty}>{t('emptyProperty')}</Text>
-      ) : (
-        floors.map((floor) => <FloorBlock key={floor.id} floor={floor} />)
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={
+        allFloors.length === 0 ? (
+          <EmptyState icon="business-outline" title={t('emptyProperty')} />
+        ) : (
+          <EmptyState
+            icon="search-outline"
+            title={t('emptyPropertySearch')}
+            actionLabel={t('clearSearch')}
+            onAction={() => {
+              setSearch('');
+              setLockFilter('all');
+            }}
+          />
+        )
+      }
+      renderItem={({ item, index }) => (
+        <PropertyFloorSection
+          floor={item}
+          open={isFloorOpen(item.id, index)}
+          onToggle={() => toggleFloor(item.id, index)}
+          onRoomPress={(room: RoomModel) => router.push(`/(setup)/property/room/${room.id}`)}
+          onSuitePress={(suite: SuiteModel) => router.push(`/(setup)/property/suite/${suite.id}`)}
+        />
       )}
-    </ScrollView>
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  scroll: { padding: 16, paddingBottom: 40 },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 40, fontSize: 16 },
-  floor: {
-    marginBottom: 14,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+  center: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
   },
-  floorHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 14,
-    alignItems: 'center',
-  },
-  floorLabel: { color: colors.text, fontWeight: '700', fontSize: 16, flex: 1 },
-  chevron: { color: colors.muted, fontSize: 18 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 10,
-    gap: 8,
-  },
-  tile: {
-    width: '30%',
-    minWidth: 96,
-    backgroundColor: colors.cardElevated,
-    borderRadius: 12,
-    padding: 10,
-    alignItems: 'center',
-    gap: 6,
-  },
-  tileTitle: { color: colors.text, fontWeight: '600', fontSize: 15 },
-  chip: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  chipOn: { backgroundColor: '#1A3D36' },
-  chipOff: { backgroundColor: '#2A3548' },
-  chipText: { fontSize: 12 },
+  header: { gap: 12, marginBottom: 8 },
+  expandAll: { alignSelf: 'flex-start', paddingVertical: 4 },
+  expandAllText: { color: colors.accent, fontWeight: '600', fontSize: 14 },
 });

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
+import { formatUserErrorMessage } from '@/src/api/formatApiError';
 import {
   ScannedLock,
   initLockFromScan,
@@ -13,6 +14,7 @@ import {
 } from '@/src/ble/ttlockBridge';
 import { ensureBlePermissions } from '@/src/ble/permissions';
 import { colors } from '@/src/theme/colors';
+import { radii, spacing } from '@/src/theme/tokens';
 
 type Props = {
   onInitialized: (lockData: string, device: ScannedLock) => void | Promise<void>;
@@ -30,7 +32,7 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
     setError(null);
     const ok = await ensureBlePermissions();
     if (!ok) {
-      setError('Bluetooth / location permission required');
+      setError(t('blePermissionsRequired'));
       return;
     }
     setDevices([]);
@@ -38,12 +40,7 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
     startScan((device) => {
       setDevices((prev) => {
         if (prev.some((d) => d.lockMac === device.lockMac)) return prev;
-        const next = [...prev, device];
-        if (isSettingMode(device)) {
-          stopScan();
-          setScanning(false);
-        }
-        return next;
+        return [...prev, device];
       });
     });
   }, []);
@@ -63,8 +60,7 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await onInitialized(lockData, device);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
+      setError(formatUserErrorMessage(e, t, 'provision'));
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setBusyMac(null);
@@ -104,11 +100,15 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
                 <Text style={styles.badge}>{t('settingMode')}</Text>
               ) : null}
             </View>
-            <Button
-              label={t('initLock')}
-              loading={busyMac === item.lockMac}
-              onPress={() => void handleInit(item)}
-            />
+            {isSettingMode(item) ? (
+              <Button
+                label={t('initLock')}
+                loading={busyMac === item.lockMac}
+                onPress={() => void handleInit(item)}
+              />
+            ) : (
+              <Text style={styles.hint}>{t('lockUseLinkExisting')}</Text>
+            )}
           </View>
         )}
       />
@@ -126,15 +126,16 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
     backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   name: { color: colors.text, fontWeight: '600', fontSize: 16 },
   meta: { color: colors.muted, fontSize: 12, marginTop: 2 },
   badge: { color: colors.accent, fontSize: 12, marginTop: 4, fontWeight: '600' },
+  hint: { color: colors.muted, fontSize: 11, maxWidth: 100, textAlign: 'right' },
 });

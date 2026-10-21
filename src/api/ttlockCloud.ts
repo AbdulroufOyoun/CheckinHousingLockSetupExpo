@@ -68,9 +68,16 @@ export async function initializeCloudLock(
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
+  let json: { errmsg?: string; description?: string } | null = null;
   const text = await response.text();
+  try {
+    json = JSON.parse(text) as { errmsg?: string; description?: string };
+  } catch {
+    json = null;
+  }
   if (!response.ok) {
-    throw new Error(text || 'TTLock initialize failed');
+    const detail = json?.errmsg || json?.description || text || 'TTLock initialize failed';
+    throw new Error(`TTLock initialize: ${detail}`);
   }
   return text;
 }

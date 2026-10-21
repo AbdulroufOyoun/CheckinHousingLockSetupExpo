@@ -1,4 +1,24 @@
-export type PropertyType = 'room' | 'suite' | 'facility';
+export type PropertyType =
+  | 'room'
+  | 'suite'
+  | 'facility'
+  | 'building'
+  | 'floor'
+  | 'gate'
+  | 'elevator'
+  | 'parking';
+
+export interface SiteUnitModel {
+  id: number;
+  name: string;
+  building_id?: number;
+  subtitle?: string;
+  direction?: string;
+  lock_data: string;
+  has_lock: boolean;
+  locks: ApiLock[];
+  lock?: CloudLock;
+}
 
 export interface ApiLock {
   id: number;
@@ -65,6 +85,10 @@ export interface FloorSection {
   building_id: number;
   building_name: string;
   label: string;
+  has_lock?: boolean;
+  locks?: ApiLock[];
+  lock_data?: string;
+  lock?: CloudLock;
   rooms: RoomModel[];
   suites: SuiteModel[];
 }
@@ -85,12 +109,82 @@ export interface TenantLockRecord {
   electricQuantity?: number;
 }
 
+export interface TtlockSyncMeta {
+  success?: boolean;
+  message?: string;
+  count?: number | null;
+}
+
+export interface PaginatedTenantLocks {
+  status: string;
+  locks: TenantLockRecord[];
+  count: number;
+  total: number;
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  ttlock_sync?: TtlockSyncMeta;
+}
+
 export interface UnlockHistoryEntry {
   id?: number;
   user_name?: string;
   created_at?: string;
+  unlocked_at?: string;
   unit_type?: string;
   room_number?: string | number;
+}
+
+export interface LockCurrentLink {
+  type: PropertyType;
+  id: number;
+  label: string;
+  linked_at?: string;
+}
+
+export interface LockDetailRecord {
+  id: number;
+  lockId: string;
+  lockName: string;
+  lockAlias: string;
+  lockMac?: string;
+  electricQuantity?: number;
+  is_linked?: boolean;
+  added_to_system_at?: string | null;
+  linked_to_context_at?: string | null;
+  current_links?: LockCurrentLink[];
+  link_timeline?: LockLinkTimelineEntry[];
+}
+
+export interface LockLinkTimelineEntry {
+  id: number;
+  lock_id: number;
+  property_type: string;
+  property_id: number;
+  property_label: string;
+  action: 'linked' | 'unlinked';
+  occurred_at: string;
+}
+
+export interface PropertyDetailContext {
+  id: number;
+  number?: string;
+  name?: string;
+  label?: string;
+  capacity?: number;
+  floor_label?: string;
+  building_name?: string;
+  suite_number?: string;
+  room_type?: { id: number; name: string };
+}
+
+export interface PropertyDetailResponse {
+  property_type: PropertyType;
+  property_id: number;
+  property: PropertyDetailContext;
+  locks: LockDetailRecord[];
+  primary_lock_id?: number;
+  link_timeline: LockLinkTimelineEntry[];
 }
 
 export interface PaginatedHistory {
@@ -108,4 +202,8 @@ export interface BootstrapData {
   rooms: RoomModel[];
   floors: FloorSection[];
   facilities: FacilityModel[];
+  buildings: SiteUnitModel[];
+  gates: SiteUnitModel[];
+  elevators: SiteUnitModel[];
+  parkings: SiteUnitModel[];
 }

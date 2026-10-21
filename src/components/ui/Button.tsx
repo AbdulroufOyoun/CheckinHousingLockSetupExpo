@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
+import { radii, spacing } from '@/src/theme/tokens';
 
 type Props = PressableProps & {
   label: string;
@@ -33,7 +34,7 @@ export function Button({ label, variant = 'primary', loading, disabled, ...rest 
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.surface : colors.accent} />
+        <ActivityIndicator color={isPrimary ? colors.accentOn : colors.accent} />
       ) : (
         <Text
           style={[
@@ -52,9 +53,9 @@ export function Button({ label, variant = 'primary', loading, disabled, ...rest 
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
@@ -65,17 +66,17 @@ const styles = StyleSheet.create({
   ghost: {
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.cardElevated,
   },
   danger: {
-    backgroundColor: '#3F1D24',
+    backgroundColor: colors.dangerSurface,
     borderWidth: 1,
     borderColor: colors.danger,
   },
-  disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.88 },
+  disabled: { opacity: 0.45 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
   label: { fontSize: 16, fontWeight: '600' },
-  labelPrimary: { color: colors.surface },
+  labelPrimary: { color: colors.accentOn },
   labelGhost: { color: colors.text },
   labelDanger: { color: colors.danger },
 });

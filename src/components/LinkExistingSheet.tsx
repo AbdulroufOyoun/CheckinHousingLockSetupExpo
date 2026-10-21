@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
+import { showUserErrorAlert } from '@/src/api/formatApiError';
 import { fetchTenantLocks, linkLock } from '@/src/api/lockSetupClient';
 import { Button } from '@/src/components/ui/Button';
 import { colors } from '@/src/theme/colors';
+import { radii, spacing } from '@/src/theme/tokens';
 import type { PropertyType } from '@/src/types/models';
 
 type Props = {
@@ -34,9 +36,13 @@ export function LinkExistingSheet({
   const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ['unlinked-for-link'],
-    queryFn: () => fetchTenantLocks('unlinked', true),
+    queryFn: () => fetchTenantLocks('unlinked', { page: 1, perPage: 50 }),
     enabled: visible,
   });
+  const syncWarning =
+    data?.ttlock_sync && data.ttlock_sync.success === false && data.ttlock_sync.message
+      ? t('ttlockSyncFailed', { message: data.ttlock_sync.message })
+      : null;
   const [busyId, setBusyId] = React.useState<number | null>(null);
 
   const link = async (lockDbId: number) => {
@@ -46,7 +52,7 @@ export function LinkExistingSheet({
       onLinked();
       onClose();
     } catch (e) {
-      alert(e instanceof Error ? e.message : t('errorGeneric'));
+      showUserErrorAlert(t, e, 'link');
     } finally {
       setBusyId(null);
     }
@@ -57,6 +63,7 @@ export function LinkExistingSheet({
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{t('linkExisting')}</Text>
+          {syncWarning ? <Text style={styles.syncWarn}>{syncWarning}</Text> : null}
           {isLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : (
@@ -93,18 +100,21 @@ export function LinkExistingSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    backgroundColor: colors.cardElevated,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.lg,
     maxHeight: '70%',
-    gap: 12,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderColor: colors.border,
   },
   title: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  syncWarn: { color: colors.warning, fontSize: 13, lineHeight: 18 },
   empty: { color: colors.muted, padding: 16, textAlign: 'center' },
   row: {
     flexDirection: 'row',

@@ -18,12 +18,26 @@ export function Skeleton({ style }: { style?: ViewStyle }) {
   return <Animated.View style={[styles.base, style, anim]} />;
 }
 
+export function UnlinkedSkeleton() {
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      <Skeleton style={{ height: 88, borderRadius: 16 }} />
+      <Skeleton style={{ height: 48, borderRadius: 14 }} />
+      <Skeleton style={{ height: 72, borderRadius: 14 }} />
+      <Skeleton style={{ height: 72, borderRadius: 14 }} />
+      <Skeleton style={{ height: 72, borderRadius: 14 }} />
+    </View>
+  );
+}
+
 export function PropertySkeleton() {
   return (
     <View style={{ padding: 16, gap: 12 }}>
-      <Skeleton style={{ height: 56, borderRadius: 16 }} />
       <Skeleton style={{ height: 120, borderRadius: 16 }} />
-      <Skeleton style={{ height: 120, borderRadius: 16 }} />
+      <Skeleton style={{ height: 48, borderRadius: 14 }} />
+      <Skeleton style={{ height: 36, borderRadius: 999, width: '70%' }} />
+      <Skeleton style={{ height: 140, borderRadius: 16 }} />
+      <Skeleton style={{ height: 140, borderRadius: 16 }} />
     </View>
   );
 }

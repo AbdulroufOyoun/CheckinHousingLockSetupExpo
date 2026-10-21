@@ -11,6 +11,51 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 45_000;
+
+function isNetworkFailureMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('network request failed') ||
+    m.includes('fetch failed') ||
+    m.includes('failed to connect') ||
+    m.includes('could not connect') ||
+    m.includes('request has been canceled') ||
+    m.includes('aborted')
+  );
+}
+
+function networkUnreachableError(): ApiError {
+  const base = getApiBase();
+  return new ApiError(
+    base
+      ? `NETWORK_UNREACHABLE:${base}`
+      : 'NETWORK_UNREACHABLE:',
+    0,
+  );
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw networkUnreachableError();
+    }
+    if (e instanceof Error && isNetworkFailureMessage(e.message)) {
+      throw networkUnreachableError();
+    }
+    throw new ApiError(
+      e instanceof Error ? e.message : `Network error contacting ${getApiBase()}`,
+      0,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface ApiEnvelope<T = Record<string, unknown>> {
   success: boolean;
   message: string;
@@ -23,6 +68,7 @@ type UnauthorizedHandler = () => void;
 let bearerToken: string | null = null;
 let selectedTenantId: string | null = null;
 let onUnauthorized: UnauthorizedHandler | null = null;
+let onTenantAccessDenied: UnauthorizedHandler | null = null;
 
 export function setLockSetupBearer(token: string | null): void {
   bearerToken = token;
@@ -42,6 +88,10 @@ export function getSelectedTenantId(): string | null {
 
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   onUnauthorized = handler;
+}
+
+export function setTenantAccessDeniedHandler(handler: UnauthorizedHandler | null): void {
+  onTenantAccessDenied = handler;
 }
 
 function tenantPath(suffix: string): string {
@@ -65,6 +115,10 @@ async function parseEnvelope<T>(response: Response): Promise<T> {
     }
     throw new ApiError(root.message || 'Unauthorized', 401, raw);
   }
+  if (response.status === 403 && root.message?.toLowerCase().includes('not authorized to access this tenant')) {
+    onTenantAccessDenied?.();
+    throw new ApiError(root.message || 'Forbidden', 403, raw);
+  }
   if (!response.ok || !root.success) {
     throw new ApiError(root.message || 'Request failed', response.status, raw);
   }
@@ -82,8 +136,19 @@ async function request<T>(
   if (init.auth !== false && bearerToken) {
     headers.Authorization = `Bearer ${bearerToken}`;
   }
-  const response = await fetch(url, { ...init, headers });
+  const response = await fetchWithTimeout(url, { ...init, headers });
   return parseEnvelope<T>(response);
+}
+
+export function normalizeMobileInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('966')) {
+    return digits.slice(-10);
+  }
+  if (digits.length === 11 && digits.startsWith('0')) {
+    return digits.slice(1);
+  }
+  return digits.length >= 10 ? digits.slice(-10) : digits;
 }
 
 export async function loginLockSetup(body: {
@@ -91,30 +156,41 @@ export async function loginLockSetup(body: {
   mobile?: string;
   password: string;
 }): Promise<{ token: string; name: string; id: number }> {
-  const params = new URLSearchParams();
-  if (body.email) params.set('email', body.email);
-  if (body.mobile) params.set('mobile', body.mobile);
-  params.set('password', body.password);
+  const payload: Record<string, string> = { password: body.password };
+  if (body.email) {
+    payload.email = body.email.trim();
+  } else if (body.mobile) {
+    payload.mobile = normalizeMobileInput(body.mobile);
+  }
 
   const url = `${getApiBase()}/api/lock-setup/login`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
     },
-    body: params.toString(),
+    body: JSON.stringify(payload),
   });
   const data = await parseEnvelope<{
     token: string;
     name: string;
     id: number;
   }>(response);
+  if (!data?.token) {
+    throw new ApiError('Login succeeded but no token in response', 502);
+  }
   return data;
 }
 
 export async function fetchTenants(): Promise<{ tenants: import('@/src/types/models').TenantSummary[] }> {
-  return request(`${getApiBase()}/api/lock-setup/tenants`);
+  const data = await request<
+    { tenants: import('@/src/types/models').TenantSummary[] } | import('@/src/types/models').TenantSummary[]
+  >(`${getApiBase()}/api/lock-setup/tenants`);
+  if (Array.isArray(data)) {
+    return { tenants: data };
+  }
+  return { tenants: data?.tenants ?? [] };
 }
 
 export async function fetchBootstrap(): Promise<import('@/src/types/models').BootstrapData> {
@@ -123,10 +199,23 @@ export async function fetchBootstrap(): Promise<import('@/src/types/models').Boo
 
 export async function fetchTenantLocks(
   status: string,
-  syncBefore = false,
-): Promise<{ locks: import('@/src/types/models').TenantLockRecord[]; count: number }> {
-  let path = tenantPath(`/locks?status=${encodeURIComponent(status)}`);
-  if (syncBefore) path += '&sync_before=1';
+  options: {
+    syncBefore?: boolean;
+    page?: number;
+    perPage?: number;
+    search?: string;
+  } = {},
+): Promise<import('@/src/types/models').PaginatedTenantLocks> {
+  const page = options.page ?? 1;
+  const perPage = options.perPage ?? 20;
+  let path = tenantPath(
+    `/locks?status=${encodeURIComponent(status)}&page=${page}&per_page=${perPage}`,
+  );
+  // sync_before ignored — locks come from tenant DB only (no TTLock cloud).
+  const search = options.search?.trim();
+  if (search) {
+    path += `&search=${encodeURIComponent(search)}`;
+  }
   return request(path);
 }
 
@@ -136,6 +225,21 @@ export async function fetchTtlockToken(): Promise<{ access_token: string }> {
 
 export async function syncTtlock(): Promise<{ locks?: unknown[]; message?: string } & Record<string, unknown>> {
   return request(tenantPath('/locks/ttlock/sync'), { method: 'POST' });
+}
+
+export async function registerLock(body: {
+  lock_data: string;
+  lock_mac: string;
+  lock_alias: string;
+  lock_id?: string;
+  lock_name?: string;
+  electric_quantity?: number;
+}): Promise<import('@/src/types/models').ApiLock> {
+  return request(tenantPath('/locks'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function linkLock(
@@ -166,6 +270,19 @@ export async function fetchLockUnlockHistory(
   return request(
     tenantPath(`/locks/${lockDbId}/unlock-history?page=${page}&per_page=${perPage}`),
   );
+}
+
+export async function fetchPropertyDetail(
+  propertyType: string,
+  propertyId: number,
+): Promise<import('@/src/types/models').PropertyDetailResponse> {
+  return request(
+    tenantPath(`/properties/${propertyType}/${propertyId}`),
+  );
+}
+
+export async function fetchLockDetail(lockDbId: number): Promise<import('@/src/types/models').LockDetailRecord> {
+  return request(tenantPath(`/locks/${lockDbId}`));
 }
 
 export async function fetchPropertyUnlockHistory(

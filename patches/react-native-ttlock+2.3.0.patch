@@ -1,0 +1,34 @@
+diff --git a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
+index 6e3b4db..f5a5dfc 100644
+--- a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
++++ b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
+@@ -773,16 +773,22 @@ public class TtlockModule extends NativeTtlockSpec {
+                 device.setManufacturerId(clientPara);
+             }
+         }
+-        TTLockClient.getDefault().initLock(device, new InitLockCallback() {
+-            @Override
+-            public void onInitLockSuccess(String lockData) {
++        PermissionUtils.doWithConnectPermission(getCurrentActivity(), permSuccess -> {
++          if (permSuccess) {
++            TTLockClient.getDefault().initLock(device, new InitLockCallback() {
++              @Override
++              public void onInitLockSuccess(String lockData) {
+                 success.invoke(lockData);
+-            }
++              }
+ 
+-            @Override
+-            public void onFail(LockError error) {
++              @Override
++              public void onFail(LockError error) {
+                 lockErrorCallback(error, fail);
+-            }
++              }
++            });
++          } else {
++            noPermissionCallback(fail);
++          }
+         });
+     }
+ 
