@@ -20,7 +20,12 @@ import { ScanLocksPanel } from '@/src/components/ScanLocksPanel';
 import { Button } from '@/src/components/ui/Button';
 import { useBootstrap, useInvalidateBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
-import { provisionAndLink } from '@/src/services/provisionService';
+import { LockPayloadConfirmModal } from '@/src/components/LockPayloadConfirmModal';
+import {
+  buildRegisterPayload,
+  provisionAndLink,
+  type RegisterLockPayload,
+} from '@/src/services/provisionService';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import { appStyles } from '@/src/theme/styles';
@@ -43,6 +48,7 @@ export function RoomDetailScreenContent({ roomId }: Props) {
   const [showScan, setShowScan] = useState(false);
   const [linkSheet, setLinkSheet] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingRegister, setPendingRegister] = useState<RegisterLockPayload | null>(null);
 
   const room = useMemo(() => findRoom(bootstrap, roomId), [bootstrap, roomId]);
 
@@ -119,11 +125,25 @@ export function RoomDetailScreenContent({ roomId }: Props) {
     if (hasLock) return;
     setBusy(true);
     try {
-      await provisionAndLink('room', roomId, `${title}Lock`, lockData, device);
+      const payload = await buildRegisterPayload(`${title}Lock`, lockData, device);
+      setPendingRegister(payload);
+      setShowScan(false);
+    } catch (e) {
+      showUserErrorAlert(t, e, 'provision');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmProvision = async () => {
+    if (!pendingRegister) return;
+    setBusy(true);
+    try {
+      await provisionAndLink('room', roomId, pendingRegister);
+      setPendingRegister(null);
       await invalidate();
       await refetchBootstrap();
       await refetchDetail();
-      setShowScan(false);
       Alert.alert(t('done'), t('linkSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'provision');
@@ -244,6 +264,18 @@ export function RoomDetailScreenContent({ roomId }: Props) {
           setLinkSheet(false);
           Alert.alert(t('done'), t('linkSuccess'));
         }}
+      />
+      <LockPayloadConfirmModal
+        visible={pendingRegister !== null}
+        title={t('registerPayloadTitle')}
+        payload={
+          pendingRegister
+            ? { api: 'POST register + link', propertyType: 'room', propertyId: roomId, body: pendingRegister }
+            : {}
+        }
+        loading={busy}
+        onCancel={() => setPendingRegister(null)}
+        onConfirm={() => void confirmProvision()}
       />
     </>
   );

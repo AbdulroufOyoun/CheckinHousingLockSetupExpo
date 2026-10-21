@@ -148,6 +148,7 @@ export interface LockDetailRecord {
   lockName: string;
   lockAlias: string;
   lockMac?: string;
+  lockData?: string;
   electricQuantity?: number;
   is_linked?: boolean;
   added_to_system_at?: string | null;

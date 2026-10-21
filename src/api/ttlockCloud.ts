@@ -82,6 +82,53 @@ export async function initializeCloudLock(
   return text;
 }
 
+export function parseLockIdFromInitializeResponse(raw: string): string | null {
+  try {
+    const j = JSON.parse(raw) as { lockId?: number | string; lock_id?: number | string };
+    const id = j.lockId ?? j.lock_id;
+    if (id === undefined || id === null || id === '') {
+      return null;
+    }
+    return String(id);
+  } catch {
+    return null;
+  }
+}
+
+/** Real TTLock cloud lockId (required for cloud/admin integrations). */
+export async function resolveCloudLockId(
+  lockData: string,
+  lockAlias: string,
+  lockMac: string,
+  accessToken: string,
+): Promise<string> {
+  try {
+    const raw = await initializeCloudLock(accessToken, lockData, lockAlias);
+    const fromInit = parseLockIdFromInitializeResponse(raw);
+    if (fromInit) {
+      return fromInit;
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const already =
+      msg.toLowerCase().includes('already') ||
+      msg.toLowerCase().includes('exist') ||
+      msg.includes('已');
+    if (!already) {
+      throw e;
+    }
+  }
+
+  const mac = lockMac.toLowerCase();
+  const clouds = await fetchCloudLocks(accessToken);
+  const match = clouds.find((c) => c.lockMac?.toLowerCase() === mac);
+  if (match?.lockId && !match.lockId.startsWith('local:')) {
+    return match.lockId;
+  }
+
+  throw new Error('TTLock lockId not found after initialize');
+}
+
 export function findLockDbIdAfterSync(
   syncData: { locks?: Array<{ id: number; lockAlias?: string }> },
   lockAlias: string,

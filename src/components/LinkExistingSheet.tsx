@@ -12,7 +12,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 
 import { showUserErrorAlert } from '@/src/api/formatApiError';
-import { fetchTenantLocks, linkLock } from '@/src/api/lockSetupClient';
+import { fetchLockDetail, fetchTenantLocks, linkLock } from '@/src/api/lockSetupClient';
+import { LockPayloadConfirmModal } from '@/src/components/LockPayloadConfirmModal';
 import { Button } from '@/src/components/ui/Button';
 import { colors } from '@/src/theme/colors';
 import { radii, spacing } from '@/src/theme/tokens';
@@ -44,11 +45,35 @@ export function LinkExistingSheet({
       ? t('ttlockSyncFailed', { message: data.ttlock_sync.message })
       : null;
   const [busyId, setBusyId] = React.useState<number | null>(null);
+  const [confirmPayload, setConfirmPayload] = React.useState<Record<string, unknown> | null>(null);
+  const [confirmLockDbId, setConfirmLockDbId] = React.useState<number | null>(null);
 
-  const link = async (lockDbId: number) => {
+  const prepareLink = async (lockDbId: number) => {
     setBusyId(lockDbId);
     try {
-      await linkLock(propertyType, propertyId, lockDbId);
+      const detail = await fetchLockDetail(lockDbId);
+      setConfirmLockDbId(lockDbId);
+      setConfirmPayload({
+        api: 'POST /api/lock-setup/tenants/{tenant}/properties/{type}/{id}/locks/{lockDbId}',
+        propertyType,
+        propertyId,
+        lockDbId,
+        lock: detail,
+      });
+    } catch (e) {
+      showUserErrorAlert(t, e, 'link');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmLink = async () => {
+    if (confirmLockDbId == null) return;
+    setBusyId(confirmLockDbId);
+    try {
+      await linkLock(propertyType, propertyId, confirmLockDbId);
+      setConfirmPayload(null);
+      setConfirmLockDbId(null);
       onLinked();
       onClose();
     } catch (e) {
@@ -75,7 +100,7 @@ export function LinkExistingSheet({
                 <Pressable
                   style={styles.row}
                   disabled={busyId !== null}
-                  onPress={() => void link(item.id)}
+                  onPress={() => void prepareLink(item.id)}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.name}>{item.lockAlias || item.lockName}</Text>
@@ -93,6 +118,17 @@ export function LinkExistingSheet({
           <Button label={t('done')} variant="ghost" onPress={onClose} />
         </View>
       </View>
+      <LockPayloadConfirmModal
+        visible={confirmPayload !== null}
+        title={t('linkPayloadTitle')}
+        payload={confirmPayload ?? {}}
+        loading={busyId !== null && confirmLockDbId !== null}
+        onCancel={() => {
+          setConfirmPayload(null);
+          setConfirmLockDbId(null);
+        }}
+        onConfirm={() => void confirmLink()}
+      />
     </Modal>
   );
 }

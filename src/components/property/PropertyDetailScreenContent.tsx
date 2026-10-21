@@ -22,7 +22,12 @@ import { Button } from '@/src/components/ui/Button';
 import { useBootstrap, useInvalidateBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
 import { showUserErrorAlert } from '@/src/api/formatApiError';
-import { provisionAndLink } from '@/src/services/provisionService';
+import { LockPayloadConfirmModal } from '@/src/components/LockPayloadConfirmModal';
+import {
+  buildRegisterPayload,
+  provisionAndLink,
+  type RegisterLockPayload,
+} from '@/src/services/provisionService';
 import { unlockWithLock } from '@/src/services/unlockService';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
@@ -49,6 +54,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
   const [showScan, setShowScan] = useState(false);
   const [linkSheet, setLinkSheet] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingRegister, setPendingRegister] = useState<RegisterLockPayload | null>(null);
 
   const entity = useMemo(
     () => getPropertyEntity(bootstrap, propertyType, propertyId),
@@ -108,11 +114,25 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
     if (hasLock) return;
     setBusy(true);
     try {
-      await provisionAndLink(propertyType, propertyId, aliasForProvision(), lockData, device);
+      const payload = await buildRegisterPayload(aliasForProvision(), lockData, device);
+      setPendingRegister(payload);
+      setShowScan(false);
+    } catch (e) {
+      showUserErrorAlert(t, e, 'provision');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmProvision = async () => {
+    if (!pendingRegister) return;
+    setBusy(true);
+    try {
+      await provisionAndLink(propertyType, propertyId, pendingRegister);
+      setPendingRegister(null);
       await invalidate();
       await refetchBootstrap();
       await refetchDetail();
-      setShowScan(false);
       Alert.alert(t('done'), t('linkSuccess'));
     } catch (e) {
       showUserErrorAlert(t, e, 'provision');
@@ -395,6 +415,23 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
           void refetchDetail();
           Alert.alert(t('done'), t('linkSuccess'));
         }}
+      />
+      <LockPayloadConfirmModal
+        visible={pendingRegister !== null}
+        title={t('registerPayloadTitle')}
+        payload={
+          pendingRegister
+            ? {
+                api: 'POST /api/lock-setup/tenants/{tenant}/locks then link',
+                propertyType,
+                propertyId,
+                body: pendingRegister,
+              }
+            : {}
+        }
+        loading={busy}
+        onCancel={() => setPendingRegister(null)}
+        onConfirm={() => void confirmProvision()}
       />
     </>
   );
