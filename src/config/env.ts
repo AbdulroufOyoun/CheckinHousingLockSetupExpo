@@ -1,6 +1,11 @@
 import Constants from 'expo-constants';
 
 import { getApiBaseOverride } from '@/src/config/apiBaseOverride';
+import {
+  DEV_API_BASE,
+  PRODUCTION_API_BASE,
+  TTLOCK_CLIENT_ID as DEFAULT_TTLOCK_CLIENT_ID,
+} from '@/src/config/projectDefaults';
 
 function trimTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
@@ -55,12 +60,17 @@ export function getApiBase(): string {
     return normalizeApiRoot(fromExtra);
   }
   if (isProductionAppVariant()) {
-    return '';
+    return PRODUCTION_API_BASE;
   }
-  return 'http://10.0.2.2:8000';
+  return DEV_API_BASE;
 }
 
 export function getTtlockClientId(): string {
   const fromExtra = Constants.expoConfig?.extra?.ttlockClientId as string | undefined;
-  return fromExtra ?? process.env.EXPO_PUBLIC_TTLOCK_CLIENT_ID ?? '';
+  return fromExtra ?? process.env.EXPO_PUBLIC_TTLOCK_CLIENT_ID ?? DEFAULT_TTLOCK_CLIENT_ID;
+}
+
+/** Server URL is baked into the repo; login screen does not require editing it. */
+export function isApiBasePreconfigured(): boolean {
+  return Boolean(getApiBase());
 }

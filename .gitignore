@@ -30,8 +30,7 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env
+# local overrides only (committed .env holds team defaults)
 .env*.local
 
 # typescript
