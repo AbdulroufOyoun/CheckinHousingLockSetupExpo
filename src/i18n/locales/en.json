@@ -139,5 +139,10 @@
   "unitHasLockMessage": "Unlink the current lock from the lock details page before adding or linking another.",
   "siteUnitLockAttached": "Lock linked to this unit",
   "siteUnitUnlockHistory": "Unlocks at this unit",
-  "siteDetailDirection": "Direction"
+  "siteDetailDirection": "Direction",
+  "linkSaltoDoor": "Link Salto door",
+  "saltoInstallationId": "Salto installation ID",
+  "saltoDoorId": "Salto door ID",
+  "lockAlias": "Lock label",
+  "loadSaltoDoors": "Load doors from Salto"
 }

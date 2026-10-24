@@ -1,0 +1,43 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def saltoAar = file('libs/salto-justinmobile-sdk.aar')
+def saltoSdkPresent = saltoAar.exists()
+
+android {
+    namespace "com.checkinhousing.saltojustin"
+    compileSdkVersion safeExtGet('compileSdkVersion', 35)
+
+    defaultConfig {
+        minSdkVersion safeExtGet('minSdkVersion', 24)
+        targetSdkVersion safeExtGet('targetSdkVersion', 35)
+        buildConfigField "boolean", "SALTO_SDK_PRESENT", "${saltoSdkPresent}"
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += saltoSdkPresent ? 'src/salto' : 'src/stub'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation "com.facebook.react:react-android"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    if (saltoSdkPresent) {
+        implementation files('libs/salto-justinmobile-sdk.aar')
+    }
+}
+
+def safeExtGet(prop, fallback) {
+    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}

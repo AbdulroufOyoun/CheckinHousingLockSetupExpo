@@ -1,0 +1,12 @@
+{
+  "name": "react-native-salto-justin",
+  "version": "1.0.0",
+  "description": "Salto JustIN Mobile BLE unlock bridge for React Native",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": ["src", "android"],
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

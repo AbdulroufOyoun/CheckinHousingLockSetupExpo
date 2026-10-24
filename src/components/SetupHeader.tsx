@@ -41,6 +41,13 @@ export function SetupHeader() {
         </Pressable>
         <View style={styles.actions}>
           <Pressable
+            accessibilityLabel={t('linkSaltoDoor')}
+            onPress={() => router.push('/(setup)/locks/salto-link')}
+            style={({ pressed }) => [styles.actionGhost, pressed && styles.pressed]}
+          >
+            <Ionicons name="key-outline" size={20} color={colors.textSecondary} />
+          </Pressable>
+          <Pressable
             accessibilityLabel={t('programNewLock')}
             onPress={() => router.push('/(setup)/locks/quick-provision')}
             style={({ pressed }) => [styles.actionPrimary, pressed && styles.pressed]}

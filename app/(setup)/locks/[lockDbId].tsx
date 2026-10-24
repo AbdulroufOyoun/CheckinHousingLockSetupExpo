@@ -56,11 +56,14 @@ export default function LockDetailScreen() {
 
   const apiLock: CloudLock = {
     dbId: lockDbId,
+    vendor: lockDetail?.vendor ?? (lockDetail?.lockId?.startsWith('salto:') ? 'salto' : 'ttlock'),
     lockId: lockDetail?.lockId ?? params.lockCloudId ?? '',
     lockMac: lockDetail?.lockMac ?? params.lockMac ?? '',
     lockAlias: lockDetail?.lockAlias ?? params.title ?? '',
     lockName: lockDetail?.lockName ?? params.title ?? '',
     lockData: lockDetail?.lockData ?? '',
+    saltoInstallationId: lockDetail?.saltoInstallationId,
+    saltoDoorId: lockDetail?.saltoDoorId,
   };
 
   const historyQuery = useInfiniteQuery({

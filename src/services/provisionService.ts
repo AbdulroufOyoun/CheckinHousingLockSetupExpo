@@ -43,5 +43,20 @@ export async function provisionAndLink(
 }
 
 export async function registerLocalOnly(payload: RegisterLockPayload): Promise<void> {
+  await registerLock({ ...payload, vendor: 'ttlock' });
+}
+
+export type RegisterSaltoPayload = {
+  vendor: 'salto';
+  lock_alias: string;
+  lock_name?: string;
+  salto_installation_id: string;
+  salto_door_id: string;
+  salto_unit_id?: string;
+  salto_device_id?: string;
+  lock_mac?: string;
+};
+
+export async function registerSaltoDoor(payload: RegisterSaltoPayload): Promise<void> {
   await registerLock(payload);
 }

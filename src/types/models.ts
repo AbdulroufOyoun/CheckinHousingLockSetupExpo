@@ -20,22 +20,36 @@ export interface SiteUnitModel {
   lock?: CloudLock;
 }
 
+export type LockVendor = 'ttlock' | 'salto';
+
 export interface ApiLock {
   id: number;
+  vendor?: LockVendor;
   lockId: string;
   lockName: string;
   lockMac: string;
   lockAlias: string;
   lockData?: string;
+  saltoInstallationId?: string | null;
+  saltoDoorId?: string | null;
+  saltoUnitId?: string | null;
+  saltoDeviceId?: string | null;
+  digitalKey?: string;
+  keyExpiresAt?: string;
 }
 
 export interface CloudLock {
+  vendor?: LockVendor;
   lockId: string;
   lockName: string;
   lockData: string;
   lockMac: string;
   lockAlias: string;
   dbId?: number;
+  digitalKey?: string;
+  keyExpiresAt?: string;
+  saltoInstallationId?: string | null;
+  saltoDoorId?: string | null;
 }
 
 export interface RoomModel {
@@ -144,11 +158,16 @@ export interface LockCurrentLink {
 
 export interface LockDetailRecord {
   id: number;
+  vendor?: LockVendor;
   lockId: string;
   lockName: string;
   lockAlias: string;
   lockMac?: string;
   lockData?: string;
+  saltoInstallationId?: string | null;
+  saltoDoorId?: string | null;
+  saltoUnitId?: string | null;
+  saltoDeviceId?: string | null;
   electricQuantity?: number;
   is_linked?: boolean;
   added_to_system_at?: string | null;

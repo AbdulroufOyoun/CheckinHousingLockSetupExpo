@@ -227,19 +227,36 @@ export async function syncTtlock(): Promise<{ locks?: unknown[]; message?: strin
   return request(tenantPath('/locks/ttlock/sync'), { method: 'POST' });
 }
 
-export async function registerLock(body: {
-  lock_data: string;
-  lock_mac: string;
-  lock_alias: string;
-  lock_id?: string;
-  lock_name?: string;
-  electric_quantity?: number;
-}): Promise<import('@/src/types/models').ApiLock> {
+export async function registerLock(
+  body: Record<string, unknown>,
+): Promise<import('@/src/types/models').ApiLock> {
   return request(tenantPath('/locks'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchSaltoDoors(installationId?: string): Promise<{
+  doors: Array<{
+    id: string;
+    name: string;
+    installation_id: string | null;
+    unit_id: string | null;
+  }>;
+}> {
+  let path = tenantPath('/locks/salto/doors');
+  if (installationId?.trim()) {
+    path += `?installation_id=${encodeURIComponent(installationId.trim())}`;
+  }
+  return request(path);
+}
+
+export async function fetchSaltoSetupKey(lockDbId: number): Promise<{
+  digitalKey: string;
+  keyExpiresAt: string;
+}> {
+  return request(tenantPath(`/locks/${lockDbId}/salto-key`));
 }
 
 export async function linkLock(

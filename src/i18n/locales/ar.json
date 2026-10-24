@@ -139,5 +139,10 @@
   "unitHasLockMessage": "فك ربط القفل الحالي من صفحة تفاصيل القفل قبل إضافة أو ربط قفل آخر.",
   "siteUnitLockAttached": "قفل مربوط بهذه الوحدة",
   "siteUnitUnlockHistory": "فتح الباب لهذه الوحدة",
-  "siteDetailDirection": "الاتجاه"
+  "siteDetailDirection": "الاتجاه",
+  "linkSaltoDoor": "ربط باب Salto",
+  "saltoInstallationId": "معرّف التثبيت Salto",
+  "saltoDoorId": "معرّف الباب",
+  "lockAlias": "اسم القفل",
+  "loadSaltoDoors": "تحميل الأبواب من Salto"
 }

@@ -21,6 +21,7 @@ export default function SetupLayout() {
       <Stack.Screen name="property/[type]/[id]" options={{ title: '' }} />
       <Stack.Screen name="property/room/[id]" options={{ title: '' }} />
       <Stack.Screen name="locks/quick-provision" options={{ title: '' }} />
+      <Stack.Screen name="locks/salto-link" options={{ title: '' }} />
       <Stack.Screen name="locks/[lockDbId]" options={{ title: '' }} />
     </Stack>
   );
