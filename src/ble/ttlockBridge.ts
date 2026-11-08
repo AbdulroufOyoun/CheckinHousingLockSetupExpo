@@ -99,7 +99,15 @@ export function initLockFromScan(device: ScanLockModal): Promise<string> {
   })();
 }
 
-export function controlUnlock(lockData: string): Promise<void> {
+export async function controlUnlock(lockData: string, lockMac?: string): Promise<void> {
+  if (lockMac?.trim()) {
+    try {
+      await waitForLockAdvertisement(lockMac.trim());
+    } catch {
+      // Proceed; native stack may still connect using cached scan.
+    }
+  }
+
   return new Promise((resolve, reject) => {
     Ttlock.controlLock(
       LockControlType.Unlock,
