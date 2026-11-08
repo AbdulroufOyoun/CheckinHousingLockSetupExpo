@@ -29,7 +29,7 @@ import { colors } from '@/src/theme/colors';
 import { appStyles } from '@/src/theme/styles';
 import { elevation, radii, spacing } from '@/src/theme/tokens';
 import type { PropertyType } from '@/src/types/models';
-import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
+import { cloudLockForUnlock, cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 import { facilityDisplayName } from '@/src/utils/lockMerge';
 import { getPropertyEntity, siteUnitTitle } from '@/src/utils/bootstrapLookup';
 import { formatDateTime } from '@/src/utils/formatDateTime';
@@ -152,7 +152,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
   };
 
   const onUnlock = async () => {
-    const cloudLock = cloudLockFromApiLock(primaryLock) ?? lock;
+    const cloudLock = cloudLockForUnlock(primaryLock, lock, lockDbId);
     setUnlockBusy(true);
     try {
       await unlockWithLock(cloudLock);

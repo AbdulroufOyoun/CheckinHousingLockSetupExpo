@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: false,
   name: 'Checkin Lock Setup',
   slug: 'checkinhousing-lock-setup',
-  version: '1.0.8',
+  version: '1.0.9',
   orientation: 'default',
   scheme: 'checkin-lock-setup',
   userInterfaceStyle: 'dark',
@@ -40,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    versionCode: 10,
+    versionCode: 11,
     softwareKeyboardLayoutMode: 'resize',
     package: 'com.checkinhousing.locksetup',
     adaptiveIcon: {

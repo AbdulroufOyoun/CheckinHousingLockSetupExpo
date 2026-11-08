@@ -19,6 +19,30 @@ export function cloudLockFromApiLock(api: LockRecord | undefined | null): CloudL
   };
 }
 
+/** Prefer fresh API lock; always decrypt with known db id before unlock. */
+export function cloudLockForUnlock(
+  primary: LockRecord | undefined | null,
+  fallback: CloudLock | undefined,
+  lockDbId?: number,
+): CloudLock | undefined {
+  const fromApi = cloudLockFromApiLock(primary);
+  if (fromApi) {
+    return fromApi;
+  }
+  if (!fallback) {
+    return undefined;
+  }
+  const dbId = fallback.dbId ?? lockDbId;
+  if (!dbId) {
+    return fallback;
+  }
+  return {
+    ...fallback,
+    dbId,
+    lockData: resolveApiLockData({ id: dbId, lockData: fallback.lockData }),
+  };
+}
+
 export function firstLockData(locks: ApiLock[] | undefined): string {
   const first = locks?.[0];
   return first?.lockData?.trim() ?? '';

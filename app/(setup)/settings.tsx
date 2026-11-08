@@ -3,7 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
+import Constants from 'expo-constants';
+
 import { getApiBase } from '@/src/config/env';
+import { hasWireLockDataKeyConfigured } from '@/src/crypto/lockDataWire';
 import { Button } from '@/src/components/ui/Button';
 import { TextField } from '@/src/components/ui/TextField';
 import { Screen } from '@/src/components/ui/Screen';
@@ -58,6 +61,11 @@ export default function SettingsScreen() {
         />
         <Text style={styles.label}>{t('selectTenant')}</Text>
         <Text style={styles.value}>{tenantDomain ?? tenantId ?? '—'}</Text>
+        <Text style={styles.label}>App</Text>
+        <Text style={styles.value}>
+          v{Constants.expoConfig?.version ?? '?'} · wire key{' '}
+          {hasWireLockDataKeyConfigured() ? 'OK' : 'MISSING'}
+        </Text>
       </View>
 
       <Text style={appStyles.sectionTitle}>{t('language')}</Text>

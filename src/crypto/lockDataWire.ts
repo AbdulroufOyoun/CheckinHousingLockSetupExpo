@@ -7,13 +7,14 @@ const IV_LEN = 12;
 const TAG_LEN = 16;
 
 function wireKeyBase64(): string {
-  const fromExtra = Constants.expoConfig?.extra?.lockDataWireKey;
-  if (typeof fromExtra === 'string' && fromExtra.trim() !== '') {
-    return fromExtra.trim();
-  }
+  // Metro / .env.local: process.env first. EAS APK: extra is set at build time.
   const fromEnv = process.env.EXPO_PUBLIC_LOCK_DATA_WIRE_KEY;
   if (typeof fromEnv === 'string' && fromEnv.trim() !== '') {
     return fromEnv.trim();
+  }
+  const fromExtra = Constants.expoConfig?.extra?.lockDataWireKey;
+  if (typeof fromExtra === 'string' && fromExtra.trim() !== '') {
+    return fromExtra.trim();
   }
   return '';
 }

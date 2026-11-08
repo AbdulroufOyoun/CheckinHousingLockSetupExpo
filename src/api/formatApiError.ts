@@ -4,6 +4,12 @@ import { Alert } from 'react-native';
 import { formatBleUserMessage, bleErrorI18nKey } from '@/src/ble/bleErrors';
 import { getApiBase } from '@/src/config/env';
 
+import {
+  formatUnlockDiagnosticBlock,
+  hintForDiagnostic,
+  UnlockError,
+} from '@/src/services/unlockDiagnostics';
+
 import { ApiError } from './lockSetupClient';
 
 export type UserErrorContext = 'login' | 'link' | 'provision' | 'unlock' | 'sync' | 'general';
@@ -129,6 +135,13 @@ export function formatUserErrorMessage(
   t: TFunction,
   context: UserErrorContext = 'general',
 ): string {
+  if (e instanceof UnlockError) {
+    const d = { ...e.diagnostic, hint: hintForDiagnostic(e.diagnostic, t) };
+    const block = formatUnlockDiagnosticBlock(d, t);
+    const headline = e.message.trim() || t('errorGeneric');
+    return `${headline}\n\n${block}`;
+  }
+
   if (e instanceof ApiError) {
     const mapped = mapApiError(e, t, context);
     if (mapped) return mapped;
