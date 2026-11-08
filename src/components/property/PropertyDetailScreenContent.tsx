@@ -152,7 +152,7 @@ export function PropertyDetailScreenContent({ propertyType, propertyId }: Props)
   };
 
   const onUnlock = async () => {
-    const cloudLock = lock ?? cloudLockFromApiLock(primaryLock);
+    const cloudLock = cloudLockFromApiLock(primaryLock) ?? lock;
     setUnlockBusy(true);
     try {
       await unlockWithLock(cloudLock);

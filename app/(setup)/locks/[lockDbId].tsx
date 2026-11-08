@@ -21,11 +21,11 @@ import { useInvalidateBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
 import { showUserErrorAlert } from '@/src/api/formatApiError';
 import { unlockWithLock } from '@/src/services/unlockService';
+import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 import type { PropertyType } from '@/src/types/models';
 import { colors } from '@/src/theme/colors';
 import { appStyles } from '@/src/theme/styles';
 import { radii, spacing } from '@/src/theme/tokens';
-import type { CloudLock } from '@/src/types/models';
 import { formatDateTime } from '@/src/utils/formatDateTime';
 
 const PER_PAGE = 15;
@@ -54,17 +54,19 @@ export default function LockDetailScreen() {
     enabled: lockDbId > 0,
   });
 
-  const apiLock: CloudLock = {
-    dbId: lockDbId,
-    vendor: lockDetail?.vendor ?? (lockDetail?.lockId?.startsWith('salto:') ? 'salto' : 'ttlock'),
-    lockId: lockDetail?.lockId ?? params.lockCloudId ?? '',
-    lockMac: lockDetail?.lockMac ?? params.lockMac ?? '',
-    lockAlias: lockDetail?.lockAlias ?? params.title ?? '',
-    lockName: lockDetail?.lockName ?? params.title ?? '',
-    lockData: lockDetail?.lockData ?? '',
-    saltoInstallationId: lockDetail?.saltoInstallationId,
-    saltoDoorId: lockDetail?.saltoDoorId,
-  };
+  const apiLock = useMemo(
+    () =>
+      cloudLockFromApiLock(lockDetail) ??
+      cloudLockFromApiLock({
+        id: lockDbId,
+        lockId: params.lockCloudId ?? '',
+        lockMac: params.lockMac ?? '',
+        lockAlias: params.title ?? '',
+        lockName: params.title ?? '',
+        lockData: '',
+      }),
+    [lockDetail, lockDbId, params.lockCloudId, params.lockMac, params.title],
+  );
 
   const historyQuery = useInfiniteQuery({
     queryKey: ['lock-unlock-history', lockDbId],

@@ -1,7 +1,7 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 
 const PRODUCTION_API_BASE = 'https://checkin-api.learnnowsyria.com';
-const DEV_API_BASE = 'http://192.168.1.104:8000';
+const DEV_API_BASE = 'http://192.168.1.105:8000';
 const TTLOCK_CLIENT_ID = '6515a7be0115469f90ad7b1bddbc4b5b';
 
 const isProductionBuild =
@@ -20,9 +20,10 @@ const useDevClient =
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
+  newArchEnabled: false,
   name: 'Checkin Lock Setup',
   slug: 'checkinhousing-lock-setup',
-  version: '1.0.2',
+  version: '1.0.7',
   orientation: 'default',
   scheme: 'checkin-lock-setup',
   userInterfaceStyle: 'dark',
@@ -32,13 +33,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     apiBase,
     appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? 'development',
     ttlockClientId,
+    lockDataWireKey: process.env.EXPO_PUBLIC_LOCK_DATA_WIRE_KEY?.trim() ?? '',
     router: {},
     eas: {
       projectId: '2a1b1e36-7d9c-4916-aea8-eeae6ff6cfe5',
     },
   },
   android: {
-    versionCode: 4,
+    versionCode: 9,
     softwareKeyboardLayoutMode: 'resize',
     package: 'com.checkinhousing.locksetup',
     adaptiveIcon: {
@@ -59,6 +61,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(useDevClient ? (['expo-dev-client'] as const) : []),
     'expo-localization',
     'expo-secure-store',
+    'expo-status-bar',
+    'expo-web-browser',
     [
       'expo-splash-screen',
       {
@@ -73,6 +77,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         android: {
           usesCleartextTraffic: true,
           minSdkVersion: 24,
+          // react-native-ttlock is not New Architecture–ready (expo-doctor / Gradle on EAS).
+          newArchEnabled: false,
         },
       },
     ],

@@ -1,4 +1,12 @@
+import { resolveApiLockData } from '@/src/crypto/lockDataWire';
 import type { ApiLock, CloudLock, FacilityModel, RoomModel, SuiteModel } from '@/src/types/models';
+
+const WIRE_PREFIX = 'ldw1:';
+
+function isDecryptedLockData(lockData?: string | null): boolean {
+  const trimmed = lockData?.trim() ?? '';
+  return trimmed.length > 0 && !trimmed.startsWith(WIRE_PREFIX);
+}
 
 export function apiLockToCloud(api: ApiLock): CloudLock {
   return {
@@ -6,7 +14,7 @@ export function apiLockToCloud(api: ApiLock): CloudLock {
     lockName: api.lockName,
     lockMac: api.lockMac,
     lockAlias: api.lockAlias,
-    lockData: api.lockData ?? '',
+    lockData: resolveApiLockData(api),
     dbId: api.id,
   };
 }
@@ -14,7 +22,10 @@ export function apiLockToCloud(api: ApiLock): CloudLock {
 export function mergeCloudLock(apiLock: CloudLock | undefined, cloudList: CloudLock[]): CloudLock | undefined {
   if (!apiLock) return undefined;
   let lock = { ...apiLock };
-  if (lock.lockData) return lock;
+  if (lock.lockData?.trim().startsWith(WIRE_PREFIX) && lock.dbId) {
+    lock.lockData = resolveApiLockData({ id: lock.dbId, lockData: lock.lockData });
+  }
+  if (isDecryptedLockData(lock.lockData)) return lock;
 
   const match = findInCloudList(lock, cloudList);
   if (match) {
@@ -56,7 +67,7 @@ export function applyBootstrapLock<T extends { locks: ApiLock[]; has_lock: boole
         lockName: api.lockName,
         lockMac: api.lockMac,
         lockAlias: api.lockAlias,
-        lockData: api.lockData ?? '',
+        lockData: resolveApiLockData(api),
         dbId: api.id,
       },
       cloudList,
@@ -115,7 +126,7 @@ export function resolveLockData(
 ): string | null {
   if (!lock) return null;
   const merged = mergeCloudLock(lock, cloudList);
-  if (merged?.lockData) return merged.lockData;
+  if (isDecryptedLockData(merged?.lockData)) return merged!.lockData;
   return null;
 }
 

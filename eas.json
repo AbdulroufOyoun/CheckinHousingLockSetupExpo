@@ -27,6 +27,7 @@
       }
     },
     "production": {
+      "environment": "production",
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "production",

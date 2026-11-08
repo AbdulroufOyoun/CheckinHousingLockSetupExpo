@@ -237,28 +237,6 @@ export async function registerLock(
   });
 }
 
-export async function fetchSaltoDoors(installationId?: string): Promise<{
-  doors: Array<{
-    id: string;
-    name: string;
-    installation_id: string | null;
-    unit_id: string | null;
-  }>;
-}> {
-  let path = tenantPath('/locks/salto/doors');
-  if (installationId?.trim()) {
-    path += `?installation_id=${encodeURIComponent(installationId.trim())}`;
-  }
-  return request(path);
-}
-
-export async function fetchSaltoSetupKey(lockDbId: number): Promise<{
-  digitalKey: string;
-  keyExpiresAt: string;
-}> {
-  return request(tenantPath(`/locks/${lockDbId}/salto-key`));
-}
-
 export async function linkLock(
   propertyType: string,
   propertyId: number,

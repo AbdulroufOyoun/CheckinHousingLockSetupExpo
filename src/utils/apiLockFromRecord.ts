@@ -1,3 +1,4 @@
+import { resolveApiLockData } from '@/src/crypto/lockDataWire';
 import type { ApiLock, CloudLock, LockDetailRecord } from '@/src/types/models';
 
 type LockRecord = ApiLock | LockDetailRecord;
@@ -9,16 +10,12 @@ export function cloudLockFromApiLock(api: LockRecord | undefined | null): CloudL
   }
   return {
     dbId: api.id,
-    vendor: api.vendor ?? (api.lockId?.startsWith('salto:') ? 'salto' : 'ttlock'),
+    vendor: 'ttlock',
     lockId: api.lockId,
     lockName: api.lockName,
     lockMac: api.lockMac,
     lockAlias: api.lockAlias,
-    lockData: api.lockData ?? '',
-    digitalKey: api.digitalKey,
-    keyExpiresAt: api.keyExpiresAt,
-    saltoInstallationId: api.saltoInstallationId,
-    saltoDoorId: api.saltoDoorId,
+    lockData: resolveApiLockData(api),
   };
 }
 

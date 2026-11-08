@@ -20,7 +20,7 @@ export interface SiteUnitModel {
   lock?: CloudLock;
 }
 
-export type LockVendor = 'ttlock' | 'salto';
+export type LockVendor = 'ttlock';
 
 export interface ApiLock {
   id: number;
