@@ -120,7 +120,7 @@
   "unlockDiagHintNoWireKey": "المفتاح غير موجود في التطبيق. أضف EXPO_PUBLIC_LOCK_DATA_WIRE_KEY في .env.local ثم npx expo start -c أو ثبّت APK جديد مع EAS.",
   "unlockDiagHintStillEncrypted": "البيانات ما زالت مشفّرة (ldw1/lds1). تأكد wire key OK، db id صحيح، ونسخة التطبيق 1.0.8+.",
   "unlockDiagHintBadLength": "طول lockData غير متوقع. اسحب للتحديث (bootstrap) أو أعد ربط القفل.",
-  "unlockDiagHintTtlockReject": "TTLock رفض lockData (مثل parameter error). غالباً نسخة قديمة من التطبيق أو lockData لا يطابق القفل — أعد التهيئة والربط أو ثبّت 1.0.9+.",
+  "unlockDiagHintTtlockReject": "إذا «من السيرفر» plain و«لـ TTLock» plain (~800 حرف) ويبدأ بـ 0C وليس ldw1: فالتشفير صحيح. parameter error يعني غالباً lockData على السيرفر قديم عن القفل — ألغِ الربط، ادخل وضع الإعداد على القفل، تهيئة من جديد، سجّل واربط، ثم جرّب قرب القفل (<1م).",
   "unlockDiagHintNoDbId": "معرّف القفل في قاعدة البيانات ناقص — افتح تفاصيل الغرفة من جديد بعد التحديث.",
   "unlockDiagHintGeneric": "راجع الإعدادات (نسخة التطبيق + wire key OK) ثم أعد المحاولة قرب القفل.",
   "history": "سجل الفتح",

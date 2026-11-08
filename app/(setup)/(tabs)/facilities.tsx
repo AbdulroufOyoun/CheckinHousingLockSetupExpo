@@ -19,6 +19,7 @@ import { useBootstrap } from '@/src/hooks/useBootstrap';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
 import { showUserErrorAlert } from '@/src/api/formatApiError';
 import { unlockWithLock } from '@/src/services/unlockService';
+import { cloudLockForUnlock } from '@/src/utils/apiLockFromRecord';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import { radii, spacing } from '@/src/theme/tokens';
@@ -37,7 +38,8 @@ export default function FacilitiesTab() {
     void (async () => {
       setUnlockingId(facility.id);
       try {
-        await unlockWithLock(facility.lock);
+        const lock = cloudLockForUnlock(facility.locks?.[0], facility.lock, facility.lock?.dbId);
+        await unlockWithLock(lock);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(t('done'), t('unlockSuccess'));
       } catch (e) {

@@ -34,6 +34,7 @@ export type UnlockDiagnostic = {
   stage: 'precheck' | 'decrypt' | 'ttlock';
   nativeMessage?: string;
   hint?: string;
+  resolvedPreview?: string;
 };
 
 export function buildUnlockDiagnostic(
@@ -43,6 +44,9 @@ export function buildUnlockDiagnostic(
   stage: UnlockDiagnostic['stage'],
   extra?: Pick<UnlockDiagnostic, 'nativeMessage' | 'hint'>,
 ): UnlockDiagnostic {
+  const resolvedPreview =
+    resolved.length > 0 ? `${resolved.slice(0, 8)}…` : undefined;
+
   return {
     appVersion: Constants.expoConfig?.version ?? '?',
     apiBase: getApiBase(),
@@ -56,6 +60,7 @@ export function buildUnlockDiagnostic(
     resolvedFormat: lockDataFormat(resolved),
     resolvedLen: resolved.length,
     stage,
+    resolvedPreview,
     ...extra,
   };
 }
@@ -85,7 +90,9 @@ export function formatUnlockDiagnosticBlock(d: UnlockDiagnostic, t: TFunction): 
     `— ${formatLabel(t, 'lock')}: db #${d.lockDbId ?? '—'} · MAC ${d.lockMac ?? '—'}`,
     d.lockAlias ? `— Alias: ${d.lockAlias}` : null,
     `— ${formatLabel(t, 'fromApi')}: ${d.rawFormat} (${d.rawLen} ${formatLabel(t, 'chars')})`,
-    `— ${formatLabel(t, 'forSdk')}: ${d.resolvedFormat} (${d.resolvedLen} ${formatLabel(t, 'chars')})`,
+    `— ${formatLabel(t, 'forSdk')}: ${d.resolvedFormat} (${d.resolvedLen} ${formatLabel(t, 'chars')})${
+      d.resolvedLen > 0 ? ` · ${d.resolvedPreview ?? ''}` : ''
+    }`,
     d.hint ? `\n${d.hint}` : null,
     d.nativeMessage ? `\nTTLock: ${d.nativeMessage}` : null,
   ].filter(Boolean);

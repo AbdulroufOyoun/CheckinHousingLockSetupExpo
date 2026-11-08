@@ -1,7 +1,9 @@
+import { fetchLockDetail } from '@/src/api/lockSetupClient';
 import { ensureBlePermissions } from '@/src/ble/permissions';
 import { controlUnlock } from '@/src/ble/ttlockBridge';
 import { resolveApiLockData } from '@/src/crypto/lockDataWire';
 import type { CloudLock } from '@/src/types/models';
+import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 
 import {
   buildUnlockDiagnostic,
@@ -11,6 +13,26 @@ import {
 const WIRE_PREFIX = 'ldw1:';
 const STORAGE_PREFIX = 'lds1:';
 
+async function lockWithFreshApiData(apiLock: CloudLock): Promise<CloudLock> {
+  if (!apiLock.dbId || apiLock.dbId < 1) {
+    return apiLock;
+  }
+  try {
+    const detail = await fetchLockDetail(apiLock.dbId);
+    const fresh = cloudLockFromApiLock(detail);
+    if (fresh?.lockData?.trim()) {
+      return {
+        ...apiLock,
+        ...fresh,
+        dbId: fresh.dbId ?? apiLock.dbId,
+      };
+    }
+  } catch {
+    /* fall back to cached bootstrap/detail */
+  }
+  return apiLock;
+}
+
 export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<void> {
   if (!apiLock) {
     throw new Error('No lock linked');
@@ -18,32 +40,33 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
 
   await ensureBlePermissions();
 
-  const raw = (apiLock.lockData ?? '').trim();
+  const resolvedLock = await lockWithFreshApiData(apiLock);
+  const raw = (resolvedLock.lockData ?? '').trim();
   let lockData: string;
 
   try {
     lockData = resolveApiLockData({
-      id: apiLock.dbId,
-      dbId: apiLock.dbId,
-      lockData: apiLock.lockData,
+      id: resolvedLock.dbId,
+      dbId: resolvedLock.dbId,
+      lockData: resolvedLock.lockData,
     }).trim();
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    const diagnostic = buildUnlockDiagnostic(apiLock, raw, '', 'decrypt', {
+    const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, '', 'decrypt', {
       nativeMessage: message,
     });
     throw new UnlockError(message, diagnostic);
   }
 
   if (!lockData) {
-    const diagnostic = buildUnlockDiagnostic(apiLock, raw, '', 'precheck');
+    const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, '', 'precheck');
     throw new UnlockError('Missing lockData — sync bootstrap or re-provision the lock', diagnostic);
   }
 
   if (lockData.startsWith(WIRE_PREFIX)) {
-    const diagnostic = buildUnlockDiagnostic(apiLock, raw, lockData, 'decrypt');
+    const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'decrypt');
     throw new UnlockError(
-      apiLock.dbId
+      resolvedLock.dbId
         ? 'Lock data is still encrypted (ldw1) after decrypt step'
         : 'Missing lock db id for encrypted lockData',
       diagnostic,
@@ -51,19 +74,19 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
   }
 
   if (lockData.startsWith(STORAGE_PREFIX)) {
-    const diagnostic = buildUnlockDiagnostic(apiLock, raw, lockData, 'precheck');
+    const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'precheck');
     throw new UnlockError('Invalid lockData from API (lds1 storage blob)', diagnostic);
   }
 
   if (lockData.length < 80 || lockData.length > 4000) {
-    const diagnostic = buildUnlockDiagnostic(apiLock, raw, lockData, 'precheck');
+    const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'precheck');
     throw new UnlockError(`lockData length ${lockData.length} looks invalid`, diagnostic);
   }
 
-  const diagnostic = buildUnlockDiagnostic(apiLock, raw, lockData, 'ttlock');
+  const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'ttlock');
 
   try {
-    await controlUnlock(lockData, apiLock.lockMac);
+    await controlUnlock(lockData, resolvedLock.lockMac);
   } catch (e) {
     const nativeMessage = e instanceof Error ? e.message : String(e);
     throw new UnlockError(nativeMessage, { ...diagnostic, nativeMessage });
