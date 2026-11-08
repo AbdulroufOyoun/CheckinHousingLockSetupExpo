@@ -2,7 +2,6 @@ import { fetchLockDetail } from '@/src/api/lockSetupClient';
 import { ensureBlePermissions } from '@/src/ble/permissions';
 import { controlUnlock } from '@/src/ble/ttlockBridge';
 import { resolveApiLockData } from '@/src/crypto/lockDataWire';
-import { normalizeTtlockOpaqueLockData } from '@/src/crypto/ttlockOpaqueLockData';
 import type { CloudLock } from '@/src/types/models';
 import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 
@@ -83,12 +82,6 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
   if (lockData.length < 80 || lockData.length > 4000) {
     const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'precheck');
     throw new UnlockError(`lockData length ${lockData.length} looks invalid`, diagnostic);
-  }
-
-  try {
-    lockData = await normalizeTtlockOpaqueLockData(lockData);
-  } catch {
-    /* keep decrypted wire plaintext */
   }
 
   const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'ttlock');

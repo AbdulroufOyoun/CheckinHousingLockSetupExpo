@@ -119,7 +119,6 @@
   "unlockDiag_chars": "حرف",
   "unlockDiag_local": "الجوال",
   "unlockDiag_server": "السيرفر",
-  "provisionLocalUnlockFailed": "فشل فتح تجريبي مباشرة بعد التهيئة — القفل رفض هذا الـ lockData. أعد ضبط القفل (وضع الإعداد)، قف قربه (<1م)، وتهيئة من جديد. لا تسجّل على السيرفر قبل ما ينجح الفتح التجريبي.",
   "unlockDiagHintNoWireKey": "المفتاح غير موجود في التطبيق. أضف EXPO_PUBLIC_LOCK_DATA_WIRE_KEY في .env.local ثم npx expo start -c أو ثبّت APK جديد مع EAS.",
   "unlockDiagHintStillEncrypted": "البيانات ما زالت مشفّرة (ldw1/lds1). تأكد wire key OK، db id صحيح، ونسخة التطبيق 1.0.8+.",
   "unlockDiagHintBadLength": "طول lockData غير متوقع. اسحب للتحديث (bootstrap) أو أعد ربط القفل.",

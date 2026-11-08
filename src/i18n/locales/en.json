@@ -119,7 +119,6 @@
   "unlockDiag_chars": "chars",
   "unlockDiag_local": "phone",
   "unlockDiag_server": "server",
-  "provisionLocalUnlockFailed": "BLE test unlock failed right after init — the lock did not accept this lockData. Reset the lock (setting mode), stay within 1m, and initialize again. Do not register until this step succeeds.",
   "unlockDiagHintNoWireKey": "Wire key missing in app. Add EXPO_PUBLIC_LOCK_DATA_WIRE_KEY to .env.local, run npx expo start -c, or install a new APK with EAS.",
   "unlockDiagHintStillEncrypted": "Data still encrypted (ldw1/lds1). Check wire key OK, lock db id, and app 1.0.8+.",
   "unlockDiagHintBadLength": "Unexpected lockData length. Pull to refresh bootstrap or re-link the lock.",

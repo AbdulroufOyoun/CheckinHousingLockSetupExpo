@@ -119,6 +119,10 @@ export async function controlUnlock(lockData: string, lockMac?: string): Promise
     await new Promise((r) => setTimeout(r, 1200));
   }
 
+  // Official SDK expects scan stopped before controlLock (scan left running causes failures).
+  stopScan();
+  seen.clear();
+
   try {
     await new Promise<void>((resolve, reject) => {
       Ttlock.controlLock(
