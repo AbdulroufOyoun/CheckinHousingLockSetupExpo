@@ -100,26 +100,42 @@ export function initLockFromScan(device: ScanLockModal): Promise<string> {
 }
 
 export async function controlUnlock(lockData: string, lockMac?: string): Promise<void> {
+  const permitted = await ensureBlePermissions();
+  if (!permitted) {
+    throw new Error('BLE_PERMISSIONS');
+  }
+
+  stopScan();
+  seen.clear();
+
   if (lockMac?.trim()) {
     try {
       await waitForLockAdvertisement(lockMac.trim());
     } catch {
       // Proceed; native stack may still connect using cached scan.
     }
+  } else {
+    startScan(() => {});
+    await new Promise((r) => setTimeout(r, 1200));
   }
 
-  return new Promise((resolve, reject) => {
-    Ttlock.controlLock(
-      LockControlType.Unlock,
-      lockData,
-      () => {
-        resolve();
-      },
-      (errorCode: number, description: string) => {
-        reject(new Error(description || `Unlock failed (${errorCode})`));
-      },
-    );
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      Ttlock.controlLock(
+        LockControlType.Unlock,
+        lockData,
+        () => {
+          resolve();
+        },
+        (errorCode: number, description: string) => {
+          reject(new Error(description || `Unlock failed (${errorCode})`));
+        },
+      );
+    });
+  } finally {
+    stopScan();
+    seen.clear();
+  }
 }
 
 export function isSettingMode(device: ScanLockModal): boolean {

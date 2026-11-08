@@ -16,6 +16,7 @@ export function cloudLockFromApiLock(api: LockRecord | undefined | null): CloudL
     lockMac: api.lockMac,
     lockAlias: api.lockAlias,
     lockData: resolveApiLockData(api),
+    lockDataSha256Prefix: api.lockDataSha256Prefix,
   };
 }
 

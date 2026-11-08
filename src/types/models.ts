@@ -46,6 +46,7 @@ export interface CloudLock {
   lockMac: string;
   lockAlias: string;
   dbId?: number;
+  lockDataSha256Prefix?: string;
   digitalKey?: string;
   keyExpiresAt?: string;
   saltoInstallationId?: string | null;
@@ -164,6 +165,7 @@ export interface LockDetailRecord {
   lockAlias: string;
   lockMac?: string;
   lockData?: string;
+  lockDataSha256Prefix?: string;
   saltoInstallationId?: string | null;
   saltoDoorId?: string | null;
   saltoUnitId?: string | null;

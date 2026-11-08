@@ -7,6 +7,7 @@ import { Button } from '@/src/components/ui/Button';
 import { formatUserErrorMessage } from '@/src/api/formatApiError';
 import {
   ScannedLock,
+  controlUnlock,
   initLockFromScan,
   isSettingMode,
   startScan,
@@ -57,6 +58,12 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
     setError(null);
     try {
       const lockData = await initLockFromScan(device);
+      try {
+        await controlUnlock(lockData, device.lockMac);
+      } catch (unlockErr) {
+        const msg = unlockErr instanceof Error ? unlockErr.message : String(unlockErr);
+        throw new Error(`${t('provisionLocalUnlockFailed')}\n${msg}`);
+      }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await onInitialized(lockData, device);
     } catch (e) {
