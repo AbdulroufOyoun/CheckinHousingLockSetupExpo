@@ -21,7 +21,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_BASE": "https://checkin-api.learnnowsyria.com",
-        "EXPO_PUBLIC_TTLOCK_CLIENT_ID": "6515a7be0115469f90ad7b1bddbc4b5b"
+        "EXPO_PUBLIC_TTLOCK_CLIENT_ID": "6515a7be0115469f90ad7b1bddbc4b5b",
+        "EXPO_PUBLIC_LOCK_DATA_WIRE_KEY": "1EzugjLGU0isUF9gsUbC0FTpekzUE7jwbf2Yl0JQNaM="
       },
       "android": {
         "buildType": "apk"
@@ -33,7 +34,8 @@
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "production",
         "EXPO_PUBLIC_API_BASE": "https://checkin-api.learnnowsyria.com",
-        "EXPO_PUBLIC_TTLOCK_CLIENT_ID": "6515a7be0115469f90ad7b1bddbc4b5b"
+        "EXPO_PUBLIC_TTLOCK_CLIENT_ID": "6515a7be0115469f90ad7b1bddbc4b5b",
+        "EXPO_PUBLIC_LOCK_DATA_WIRE_KEY": "1EzugjLGU0isUF9gsUbC0FTpekzUE7jwbf2Yl0JQNaM="
       },
       "android": {
         "buildType": "apk"
