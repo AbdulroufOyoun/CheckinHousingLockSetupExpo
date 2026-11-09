@@ -139,7 +139,10 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
     throw new UnlockError(`lockData length ${lockData.length} looks invalid`, diagnostic);
   }
 
-  await confirmDecryptedLockData(lockData);
+  // Debug-only: show/copy plaintext before BLE unlock. Production unlocks immediately.
+  if (__DEV__) {
+    await confirmDecryptedLockData(lockData);
+  }
 
   const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'ttlock');
 

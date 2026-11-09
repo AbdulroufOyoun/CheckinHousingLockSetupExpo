@@ -56,7 +56,12 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
     setBusyMac(device.lockMac);
     setError(null);
     try {
+      // BLE init → plaintext lockData from the lock. Register/link via onInitialized
+      // immediately — never gate server save on a local trial unlock.
       const lockData = await initLockFromScan(device);
+      if (!lockData?.trim()) {
+        throw new Error('Init succeeded but lockData was empty');
+      }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await onInitialized(lockData, device);
     } catch (e) {
