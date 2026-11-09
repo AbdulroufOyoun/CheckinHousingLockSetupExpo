@@ -12,8 +12,10 @@
 git clone https://github.com/AbdulroufOyoun/CheckinHousingLockSetupExpo.git
 cd CheckinHousingLockSetupExpo
 npm install
-npm start
+npm run dev
 ```
+
+Clone to a normal folder (e.g. `C:\dev\...`), not under **OneDrive** — OneDrive file placeholders break Metro SHA-1 (`Failed to get the SHA-1 for … @noble/…`).
 
 - الـ API الافتراضي في الريبو: **`https://checkin-api.learnnowsyria.com`** (لا حاجة لـ IP محلي).
 - `npm start` يكتشف IP الـ Wi‑Fi تلقائياً ويطبع رابط الجوال (`http://YOUR-IP:8081`).
