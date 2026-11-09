@@ -1,7 +1,10 @@
+import { Alert, Clipboard } from 'react-native';
+
 import { fetchLockDetail } from '@/src/api/lockSetupClient';
 import { ensureBlePermissions } from '@/src/ble/permissions';
 import { controlUnlock } from '@/src/ble/ttlockBridge';
 import { resolveApiLockData } from '@/src/crypto/lockDataWire';
+import i18n from '@/src/i18n';
 import type { CloudLock } from '@/src/types/models';
 import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 
@@ -12,6 +15,58 @@ import {
 
 const WIRE_PREFIX = 'ldw1:';
 const STORAGE_PREFIX = 'lds1:';
+
+export class UnlockCancelledError extends Error {
+  constructor() {
+    super('UNLOCK_CANCELLED');
+    this.name = 'UnlockCancelledError';
+  }
+}
+
+/** Show decrypted lockData; user may copy, then must confirm before BLE unlock. */
+async function confirmDecryptedLockData(lockData: string): Promise<void> {
+  const t = i18n.t.bind(i18n);
+
+  // Loop so Copy can re-show the same confirm dialog afterward.
+  for (;;) {
+    const action = await new Promise<'copy' | 'unlock' | 'cancel'>((resolve) => {
+      Alert.alert(
+        t('unlockConfirmTitle'),
+        `${t('unlockConfirmHint')}\n\n${lockData}`,
+        [
+          {
+            text: t('cancel'),
+            style: 'cancel',
+            onPress: () => resolve('cancel'),
+          },
+          {
+            text: t('copyLockData'),
+            onPress: () => resolve('copy'),
+          },
+          {
+            text: t('unlock'),
+            onPress: () => resolve('unlock'),
+          },
+        ],
+        { cancelable: true, onDismiss: () => resolve('cancel') },
+      );
+    });
+
+    if (action === 'cancel') {
+      throw new UnlockCancelledError();
+    }
+    if (action === 'unlock') {
+      return;
+    }
+
+    Clipboard.setString(lockData);
+    await new Promise<void>((resolve) => {
+      Alert.alert(t('done'), t('lockDataCopied'), [
+        { text: t('done'), onPress: () => resolve() },
+      ]);
+    });
+  }
+}
 
 async function lockWithFreshApiData(apiLock: CloudLock): Promise<CloudLock> {
   if (!apiLock.dbId || apiLock.dbId < 1) {
@@ -83,6 +138,8 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
     const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'precheck');
     throw new UnlockError(`lockData length ${lockData.length} looks invalid`, diagnostic);
   }
+
+  await confirmDecryptedLockData(lockData);
 
   const diagnostic = buildUnlockDiagnostic(resolvedLock, raw, lockData, 'ttlock');
 

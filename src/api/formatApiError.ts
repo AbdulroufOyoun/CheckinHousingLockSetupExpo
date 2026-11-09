@@ -9,6 +9,7 @@ import {
   hintForDiagnostic,
   UnlockError,
 } from '@/src/services/unlockDiagnostics';
+import { UnlockCancelledError } from '@/src/services/unlockService';
 
 import { ApiError } from './lockSetupClient';
 
@@ -169,5 +170,8 @@ export function showUserErrorAlert(
   e: unknown,
   context: UserErrorContext = 'general',
 ): void {
+  if (e instanceof UnlockCancelledError) {
+    return;
+  }
   Alert.alert(t('errorTitle'), formatUserErrorMessage(e, t, context));
 }
