@@ -43,8 +43,9 @@
   },
   "scripts": {
     "postinstall": "patch-package",
-    "start": "expo start --dev-client --host lan --port 8081",
-    "dev": "expo start --dev-client -c --host lan --port 8081",
+    "start": "node scripts/start-dev-client.mjs",
+    "dev": "node scripts/start-dev-client.mjs -c",
+    "start:tunnel": "expo start --dev-client --tunnel --port 8081",
     "android": "expo run:android",
     "prebuild": "expo prebuild --platform android && node scripts/patch-android-gradle-properties.mjs",
     "prebuild:clean": "expo prebuild --clean --platform android --no-install && node scripts/patch-android-gradle-properties.mjs",
