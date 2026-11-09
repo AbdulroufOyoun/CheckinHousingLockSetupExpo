@@ -7,9 +7,9 @@ import { getApiBase } from '@/src/config/env';
 import {
   formatUnlockDiagnosticBlock,
   hintForDiagnostic,
+  UnlockCancelledError,
   UnlockError,
 } from '@/src/services/unlockDiagnostics';
-import { UnlockCancelledError } from '@/src/services/unlockService';
 
 import { ApiError } from './lockSetupClient';
 

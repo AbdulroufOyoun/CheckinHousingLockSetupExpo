@@ -10,18 +10,14 @@ import { cloudLockFromApiLock } from '@/src/utils/apiLockFromRecord';
 
 import {
   buildUnlockDiagnostic,
+  UnlockCancelledError,
   UnlockError,
 } from '@/src/services/unlockDiagnostics';
 
+export { UnlockCancelledError };
+
 const WIRE_PREFIX = 'ldw1:';
 const STORAGE_PREFIX = 'lds1:';
-
-export class UnlockCancelledError extends Error {
-  constructor() {
-    super('UNLOCK_CANCELLED');
-    this.name = 'UnlockCancelledError';
-  }
-}
 
 /** Show decrypted lockData; user may copy, then must confirm before BLE unlock. */
 async function confirmDecryptedLockData(lockData: string): Promise<void> {

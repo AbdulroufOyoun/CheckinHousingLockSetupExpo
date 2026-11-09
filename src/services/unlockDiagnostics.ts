@@ -9,6 +9,13 @@ import type { CloudLock } from '@/src/types/models';
 const WIRE_PREFIX = 'ldw1:';
 const STORAGE_PREFIX = 'lds1:';
 
+export class UnlockCancelledError extends Error {
+  constructor() {
+    super('UNLOCK_CANCELLED');
+    this.name = 'UnlockCancelledError';
+  }
+}
+
 export type LockDataFormat = 'empty' | 'wire_ldw1' | 'storage_lds1' | 'plain' | 'unknown';
 
 export function lockDataFormat(value: string): LockDataFormat {
