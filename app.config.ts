@@ -1,16 +1,10 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 
 const PRODUCTION_API_BASE = 'https://checkin-api.learnnowsyria.com';
-const DEV_API_BASE = 'http://192.168.1.105:8000';
 const TTLOCK_CLIENT_ID = '6515a7be0115469f90ad7b1bddbc4b5b';
 
-const isProductionBuild =
-  process.env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
-  process.env.EAS_BUILD_PROFILE === 'production';
-
-const apiBase =
-  process.env.EXPO_PUBLIC_API_BASE?.trim() ||
-  (isProductionBuild ? PRODUCTION_API_BASE : DEV_API_BASE);
+// Always default to production so a fresh git clone works without editing LAN IPs.
+const apiBase = process.env.EXPO_PUBLIC_API_BASE?.trim() || PRODUCTION_API_BASE;
 const ttlockClientId = process.env.EXPO_PUBLIC_TTLOCK_CLIENT_ID ?? TTLOCK_CLIENT_ID;
 
 /** Dev client only for development EAS profile / local dev builds. */

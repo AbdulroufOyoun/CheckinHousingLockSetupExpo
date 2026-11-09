@@ -1,53 +1,46 @@
 # Checkin Lock Setup (Expo)
 
-تطبيق تهيئة وربط أقفال TTLock مع CheckinAccess.
+تهيئة وربط أقفال TTLock مع CheckinAccess.
 
 **المستودع:** https://github.com/AbdulroufOyoun/CheckinHousingLockSetupExpo
 
 ---
 
-## تشغيل سريع (بدون إعداد يدوي)
-
-الروابط والإعدادات **جاهزة في الم repo** (`.env` + `app.config.ts` + EAS):
-
-| البيئة | API |
-|--------|-----|
-| تطوير (LAN) | `http://192.168.1.104:8000` |
-| إنتاج | `https://checkin-api.learnnowsyria.com` |
-| TTLock Client ID | نفس Laravel / CheckinAccess |
+## تشغيل بعد `git pull` / clone
 
 ```bash
 git clone https://github.com/AbdulroufOyoun/CheckinHousingLockSetupExpo.git
 cd CheckinHousingLockSetupExpo
 npm install
-npm run android
+npm start
 ```
 
-- **Expo Go لا يعمل** — المشروع يستخدم `react-native-ttlock` (Dev Client).
-- أول مرة: `npm run prebuild` ثم `npm run android`، أو `npm run android` يبني تلقائياً.
-- Metro فقط: `npm start` (بعد تثبيت Dev Client على الجهاز).
+- الـ API الافتراضي في الريبو: **`https://checkin-api.learnnowsyria.com`** (لا حاجة لـ IP محلي).
+- `npm start` يكتشف IP الـ Wi‑Fi تلقائياً ويطبع رابط الجوال (`http://YOUR-IP:8081`).
+- إذا المنفذ 8081 مشغول يختار منفذ تالي تلقائياً.
+- **Expo Go لا يعمل** — يلزم Dev Client (`react-native-ttlock`).
 
-شاشة الدخول: **بريد/جوال + كلمة مرور** — حقل **Server URL** يظهر معبّأاً بالافتراضي ويمكن تعديله.
-
----
-
-## EAS (APK)
+Dev Client على الجهاز:
 
 ```bash
-npm i -g eas-cli
-eas login
-eas build --profile development --platform android   # LAN dev
-eas build --profile production --platform android    # checkin-api.learnnowsyria.com
+eas build --profile development --platform android
 ```
+
+ثم افتح التطبيق واربطه بالرابط الذي يطبعه `npm start` (ليس IP قديم محفوظ).
 
 ---
 
-## تغيير IP أو السيرفر (نادر)
+## أوامر
 
-عدّل `.env` و/أو `src/config/projectDefaults.ts` و `app.config.ts` إذا تغيّر IP جهازك على الشبكة.
+| أمر | وظيفة |
+|-----|--------|
+| `npm start` | Metro + اكتشاف IP |
+| `npm run dev` | نفس الشيء مع `-c` (مسح كاش) |
+| `npm run start:tunnel` | Tunnel عبر Expo (شبكات مختلفة) |
+| `npm run android` | بناء/تشغيل أندرويد محلي |
 
 ---
 
 ## Backend
 
-[CheckinAccess](https://github.com/AbdulroufOyoun/CheckinAccess) — مسارات `api/lock-setup/*` على السيرفر **المركزي**.
+[CheckinAccess](https://github.com/AbdulroufOyoun/CheckinAccess) — `api/lock-setup/*` على السيرفر المركزي.

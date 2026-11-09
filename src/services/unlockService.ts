@@ -55,7 +55,11 @@ async function confirmDecryptedLockData(lockData: string): Promise<void> {
       return;
     }
 
-    Clipboard.setString(lockData);
+    try {
+      Clipboard.setString(lockData);
+    } catch {
+      /* Clipboard removed from some RN builds — confirm UI still works */
+    }
     await new Promise<void>((resolve) => {
       Alert.alert(t('done'), t('lockDataCopied'), [
         { text: t('done'), onPress: () => resolve() },
