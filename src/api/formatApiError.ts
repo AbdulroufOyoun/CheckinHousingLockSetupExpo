@@ -13,7 +13,7 @@ import {
 
 import { ApiError } from './lockSetupClient';
 
-export type UserErrorContext = 'login' | 'link' | 'provision' | 'unlock' | 'sync' | 'general';
+export type UserErrorContext = 'login' | 'link' | 'provision' | 'unlock' | 'sync' | 'passcode' | 'general';
 
 function isTtlockSslError(message: string): boolean {
   const m = message.toLowerCase();
@@ -26,14 +26,63 @@ function isTtlockSslError(message: string): boolean {
 
 function isTtlockHttpFailure(message: string): boolean {
   const m = message.toLowerCase();
-  return m.includes('ttlock api request failed') || m.includes('ttlock obtaintoken');
+  // Only treat as generic transport failure — do not swallow domain errors.
+  return (
+    m.includes('ttlock obtaintoken') ||
+    (m.includes('ttlock api request failed') &&
+      (m.includes('curl error') || m.includes('ssl') || m.includes('timed out') || m.includes('connection')))
+  );
+}
+
+function isPasscodeCloudMissing(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('not on ttlock cloud') ||
+    m.includes('no ttlock cloud lockid') ||
+    m.includes('passcode_data_missing') ||
+    m.includes('no password data') ||
+    m.includes('no ttlock cloud password data') ||
+    m.includes('local provisioning only') ||
+    m.includes('register/sync it to ttlock cloud') ||
+    m.includes('-1007')
+  );
+}
+
+function flattenMessageValue(message: unknown): string | null {
+  if (typeof message === 'string' && message.trim()) {
+    return message.trim();
+  }
+  if (Array.isArray(message)) {
+    const parts = message
+      .flatMap((item) => (Array.isArray(item) ? item : [item]))
+      .filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+    return parts.length ? parts.join('\n') : null;
+  }
+  if (message && typeof message === 'object') {
+    const parts: string[] = [];
+    for (const value of Object.values(message as Record<string, unknown>)) {
+      if (typeof value === 'string' && value.trim()) {
+        parts.push(value.trim());
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (typeof item === 'string' && item.trim()) parts.push(item.trim());
+        }
+      }
+    }
+    return parts.length ? parts.join('\n') : null;
+  }
+  return null;
 }
 
 function parseEnvelopeMessage(raw: string | undefined): string | null {
   if (!raw) return null;
   try {
-    const j = JSON.parse(raw) as { message?: string };
-    return typeof j.message === 'string' && j.message.trim() ? j.message.trim() : null;
+    const j = JSON.parse(raw) as { message?: unknown; data?: { errors?: unknown } };
+    return (
+      flattenMessageValue(j.message) ??
+      flattenMessageValue(j.data?.errors) ??
+      null
+    );
   } catch {
     return null;
   }
@@ -45,7 +94,7 @@ function mapApiError(e: ApiError, t: TFunction, context: UserErrorContext): stri
     return t('networkUnreachable', { url: url || '—' });
   }
 
-  const bodyMsg = parseEnvelopeMessage(e.raw) ?? e.message;
+  const bodyMsg = parseEnvelopeMessage(e.raw) ?? flattenMessageValue(e.message) ?? '';
 
   if (e.status === 401) {
     return context === 'login' ? t('loginError') : t('sessionExpired');
@@ -54,6 +103,9 @@ function mapApiError(e: ApiError, t: TFunction, context: UserErrorContext): stri
     return t('apiTenantForbidden');
   }
   if (e.status === 404) {
+    if (context === 'passcode') {
+      return t('passcodeApiMissing');
+    }
     if (bodyMsg.toLowerCase().includes('lock')) {
       return t('apiLockNotFound');
     }
@@ -62,17 +114,27 @@ function mapApiError(e: ApiError, t: TFunction, context: UserErrorContext): stri
   if (e.status === 409 || bodyMsg.toLowerCase().includes('already has a lock')) {
     return t('apiPropertyAlreadyHasLock');
   }
-  if (e.status === 502 || isTtlockSslError(bodyMsg)) {
+  if (
+    bodyMsg.includes('PASSCODE_NEEDS_NEAR_LOCK_ONCE') ||
+    e.message.includes('PASSCODE_NEEDS_NEAR_LOCK_ONCE')
+  ) {
+    return t('passcodeNeedsNearLockOnce');
+  }
+  if (isPasscodeCloudMissing(bodyMsg) || isPasscodeCloudMissing(e.message)) {
+    return t('passcodeNeedsNearLockOnce');
+  }
+  // Only real SSL/cert failures — do not map every 502 (TTLock domain errors) to SSL.
+  if (isTtlockSslError(bodyMsg) || isTtlockSslError(e.message)) {
     return t('ttlockSslError');
   }
-  if (isTtlockHttpFailure(bodyMsg) || isTtlockSslError(e.message)) {
+  if (isTtlockHttpFailure(bodyMsg) || isTtlockHttpFailure(e.message)) {
     return t('ttlockSslError');
   }
   if (e.status === 408 || e.status === 504) {
     return t('apiRequestTimeout');
   }
 
-  if (bodyMsg && bodyMsg !== 'Request failed') {
+  if (bodyMsg && bodyMsg !== 'Request failed' && bodyMsg !== '[object Object]') {
     return bodyMsg;
   }
 
@@ -82,14 +144,26 @@ function mapApiError(e: ApiError, t: TFunction, context: UserErrorContext): stri
 function mapPlainMessage(raw: string, t: TFunction, context: UserErrorContext): string | null {
   if (!raw) return null;
 
+  if (raw === 'PASSCODE_NEEDS_NEAR_LOCK_ONCE') {
+    return t('passcodeNeedsNearLockOnce');
+  }
   if (raw === 'BLE_PERMISSIONS') {
     return t('blePermissionsRequired');
+  }
+  if (raw === 'BLE_OFF') {
+    return t('bleOff');
+  }
+  if (raw === 'BLE_UNSUPPORTED') {
+    return t('bleUnsupported');
   }
   if (raw === 'LOCK_NOT_IN_SETTING_MODE') {
     return t('lockNotInSettingMode');
   }
-  if (raw === 'BLE_RESCAN_TIMEOUT') {
+  if (raw === 'BLE_RESCAN_TIMEOUT' || raw === 'BLE_PASSCODE_TIMEOUT') {
     return context === 'provision' ? t('bleConnectTimeoutProvision') : t('bleConnectTimeout');
+  }
+  if (context === 'passcode' && raw.toLowerCase().includes('resource not found')) {
+    return t('passcodeApiMissing');
   }
   if (raw === 'No tenant selected') {
     return t('apiNoTenantSelected');
@@ -106,6 +180,9 @@ function mapPlainMessage(raw: string, t: TFunction, context: UserErrorContext): 
     return bleMapped;
   }
 
+  if (isPasscodeCloudMissing(raw)) {
+    return t('passcodeLockNotOnCloud');
+  }
   if (isTtlockSslError(raw)) {
     return t('ttlockSslError');
   }

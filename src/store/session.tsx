@@ -35,6 +35,7 @@ type SessionState = {
   token: string | null;
   tenantId: string | null;
   tenantDomain: string | null;
+  language: 'en' | 'ar';
 };
 
 type SessionContextValue = SessionState & {
@@ -54,6 +55,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     token: null,
     tenantId: null,
     tenantDomain: null,
+    language: 'en',
   });
 
   const signOut = useCallback(async () => {
@@ -63,7 +65,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     await SecureStore.deleteItemAsync(KEYS.token);
     await SecureStore.deleteItemAsync(KEYS.tenantId);
     await SecureStore.deleteItemAsync(KEYS.tenantDomain);
-    setState({ ready: true, token: null, tenantId: null, tenantDomain: null });
+    setState((s) => ({
+      ready: true,
+      token: null,
+      tenantId: null,
+      tenantDomain: null,
+      language: s.language,
+    }));
     router.replace('/(auth)/login');
   }, []);
 
@@ -109,11 +117,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         if (tenantId) {
           setSelectedTenantId(tenantId);
         }
+        const language: 'en' | 'ar' = lang?.startsWith('ar') ? 'ar' : 'en';
         setState({
           ready: true,
           token: token ?? null,
           tenantId: tenantId ?? null,
           tenantDomain: tenantDomain ?? null,
+          language,
         });
       } catch {
         setState((s) => ({ ...s, ready: true }));
@@ -144,6 +154,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback(async (lang: 'en' | 'ar') => {
     await SecureStore.setItemAsync(KEYS.lang, lang);
     await initI18n(lang);
+    setState((s) => ({ ...s, language: lang }));
   }, []);
 
   const setApiBase = useCallback(async (url: string) => {

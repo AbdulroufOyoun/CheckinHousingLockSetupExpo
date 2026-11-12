@@ -4,13 +4,15 @@ import {
   Ttlock,
 } from 'react-native-ttlock';
 
-import { ensureBlePermissions } from '@/src/ble/permissions';
+import { ensureBleReady, isBleRetryableError } from '@/src/ble/bleReady';
 
 export type ScannedLock = ScanLockModal & { key: string };
 
 const seen = new Set<string>();
 
 const RESCAN_TIMEOUT_MS = 18_000;
+const UNLOCK_RETRY_DELAY_MS = 400;
+const PASSCODE_BLE_TIMEOUT_MS = 35_000;
 
 export function startScan(onDevice: (device: ScannedLock) => void): void {
   Ttlock.startScan((scanLockModal: ScanLockModal) => {
@@ -50,6 +52,26 @@ export function waitForLockAdvertisement(lockMac: string, timeoutMs = RESCAN_TIM
   });
 }
 
+async function prepareNearLock(lockMac?: string): Promise<void> {
+  stopScan();
+  seen.clear();
+
+  if (lockMac?.trim()) {
+    try {
+      await waitForLockAdvertisement(lockMac.trim());
+    } catch {
+      // Native stack may still connect from cache.
+    }
+  } else {
+    startScan(() => {});
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+
+  // Official SDK expects scan stopped before control APIs.
+  stopScan();
+  seen.clear();
+}
+
 function initLockOnce(device: ScanLockModal): Promise<string> {
   return new Promise((resolve, reject) => {
     Ttlock.initLock(
@@ -68,10 +90,7 @@ function initLockOnce(device: ScanLockModal): Promise<string> {
 
 export function initLockFromScan(device: ScanLockModal): Promise<string> {
   return (async () => {
-    const permitted = await ensureBlePermissions();
-    if (!permitted) {
-      throw new Error('BLE_PERMISSIONS');
-    }
+    await ensureBleReady();
     if (!isSettingMode(device)) {
       throw new Error('LOCK_NOT_IN_SETTING_MODE');
     }
@@ -86,11 +105,7 @@ export function initLockFromScan(device: ScanLockModal): Promise<string> {
       return await initLockOnce(device);
     } catch (first) {
       const msg = first instanceof Error ? first.message : String(first);
-      const retry =
-        msg.toLowerCase().includes('connect timeout') ||
-        msg.toLowerCase().includes('disconnected') ||
-        msg.toLowerCase().includes('connect fail');
-      if (!retry) {
+      if (!isBleRetryableError(msg)) {
         throw first;
       }
       await waitForLockAdvertisement(device.lockMac);
@@ -99,43 +114,44 @@ export function initLockFromScan(device: ScanLockModal): Promise<string> {
   })();
 }
 
+function controlUnlockOnce(lockData: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    Ttlock.controlLock(
+      LockControlType.Unlock,
+      lockData,
+      () => resolve(),
+      (errorCode: number, description: string) => {
+        reject(new Error(description || `Unlock failed (${errorCode})`));
+      },
+    );
+  });
+}
+
+/**
+ * Unlock over BLE. Retries once after rescan on flaky Android connect failures
+ * so users do not need to tap Unlock multiple times.
+ */
 export async function controlUnlock(lockData: string, lockMac?: string): Promise<void> {
-  const permitted = await ensureBlePermissions();
-  if (!permitted) {
-    throw new Error('BLE_PERMISSIONS');
-  }
-
-  stopScan();
-  seen.clear();
-
-  if (lockMac?.trim()) {
-    try {
-      await waitForLockAdvertisement(lockMac.trim());
-    } catch {
-      // Proceed; native stack may still connect using cached scan.
-    }
-  } else {
-    startScan(() => {});
-    await new Promise((r) => setTimeout(r, 1200));
-  }
-
-  // Official SDK expects scan stopped before controlLock (scan left running causes failures).
-  stopScan();
-  seen.clear();
+  await ensureBleReady();
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      Ttlock.controlLock(
-        LockControlType.Unlock,
-        lockData,
-        () => {
-          resolve();
-        },
-        (errorCode: number, description: string) => {
-          reject(new Error(description || `Unlock failed (${errorCode})`));
-        },
-      );
-    });
+    await prepareNearLock(lockMac);
+    try {
+      await controlUnlockOnce(lockData);
+      return;
+    } catch (first) {
+      const msg = first instanceof Error ? first.message : String(first);
+      if (!isBleRetryableError(msg) || !lockMac?.trim()) {
+        throw first;
+      }
+      if (__DEV__) {
+        console.log('[unlock] BLE retry after', msg);
+      }
+      await new Promise((r) => setTimeout(r, UNLOCK_RETRY_DELAY_MS));
+      await ensureBleReady();
+      await prepareNearLock(lockMac.trim());
+      await controlUnlockOnce(lockData);
+    }
   } finally {
     stopScan();
     seen.clear();
@@ -144,4 +160,125 @@ export async function controlUnlock(lockData: string, lockMac?: string): Promise
 
 export function isSettingMode(device: ScanLockModal): boolean {
   return !device.isInited;
+}
+
+function createCustomPasscodeOnce(
+  passcode: string,
+  startDateMs: number,
+  endDateMs: number,
+  lockData: string,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+
+    const timer = setTimeout(() => {
+      finish(() => reject(new Error('BLE_PASSCODE_TIMEOUT')));
+    }, PASSCODE_BLE_TIMEOUT_MS);
+
+    Ttlock.createCustomPasscode(
+      passcode,
+      startDateMs,
+      endDateMs,
+      lockData,
+      () => finish(() => resolve()),
+      (errorCode: number, description: string) => {
+        finish(() =>
+          reject(new Error(description || `Create passcode failed (${errorCode})`)),
+        );
+      },
+    );
+  });
+}
+
+/**
+ * Reset keyboard passcode key data on the lock (BLE). Returns new lockData to upload
+ * via /v3/lock/updateLockData so remote keyboardPwd/get works (fixes TTLock -1007).
+ */
+export async function resetPasscodeData(
+  lockData: string,
+  lockMac?: string,
+): Promise<string> {
+  await ensureBleReady();
+
+  const runOnce = (): Promise<string> =>
+    new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        fn();
+      };
+      const timer = setTimeout(() => {
+        finish(() => reject(new Error('BLE_PASSCODE_TIMEOUT')));
+      }, PASSCODE_BLE_TIMEOUT_MS);
+
+      Ttlock.resetPasscode(
+        lockData,
+        (lockDataNew: string) => finish(() => resolve(lockDataNew)),
+        (errorCode: number, description: string) => {
+          finish(() =>
+            reject(new Error(description || `Reset passcode failed (${errorCode})`)),
+          );
+        },
+      );
+    });
+
+  try {
+    await prepareNearLock(lockMac);
+    try {
+      return await runOnce();
+    } catch (first) {
+      const msg = first instanceof Error ? first.message : String(first);
+      if (!isBleRetryableError(msg) || !lockMac?.trim()) {
+        throw first;
+      }
+      await ensureBleReady();
+      await prepareNearLock(lockMac.trim());
+      return await runOnce();
+    }
+  } finally {
+    stopScan();
+    seen.clear();
+  }
+}
+
+/**
+ * Write a custom timed passcode to the lock over BLE.
+ * `lockData` must already be decrypted plaintext (never ldw1/lds1).
+ */
+export async function createCustomPasscode(
+  passcode: string,
+  startDateMs: number,
+  endDateMs: number,
+  lockData: string,
+  lockMac?: string,
+): Promise<void> {
+  await ensureBleReady();
+
+  try {
+    await prepareNearLock(lockMac);
+    try {
+      await createCustomPasscodeOnce(passcode, startDateMs, endDateMs, lockData);
+      return;
+    } catch (first) {
+      const msg = first instanceof Error ? first.message : String(first);
+      if (!isBleRetryableError(msg) || !lockMac?.trim()) {
+        throw first;
+      }
+    }
+
+    await ensureBleReady();
+    await prepareNearLock(lockMac!.trim());
+    await createCustomPasscodeOnce(passcode, startDateMs, endDateMs, lockData);
+  } finally {
+    stopScan();
+    seen.clear();
+  }
 }

@@ -1,7 +1,6 @@
 import { Alert, Clipboard } from 'react-native';
 
 import { fetchLockDetail } from '@/src/api/lockSetupClient';
-import { ensureBlePermissions } from '@/src/ble/permissions';
 import { controlUnlock } from '@/src/ble/ttlockBridge';
 import { resolveApiLockData } from '@/src/crypto/lockDataWire';
 import i18n from '@/src/i18n';
@@ -94,8 +93,7 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
     throw new Error('No lock linked');
   }
 
-  await ensureBlePermissions();
-
+  // Bluetooth + permissions checked inside controlUnlock (ensureBleReady).
   const resolvedLock = await lockWithFreshApiData(apiLock);
   const raw = (resolvedLock.lockData ?? '').trim();
   let lockData: string;

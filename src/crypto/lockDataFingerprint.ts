@@ -1,5 +1,5 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
 
 /** First 16 hex chars of SHA-256 (matches PHP hash on TTLock binary lockData string). */
 export function lockDataSha256Prefix(plain: string): string {

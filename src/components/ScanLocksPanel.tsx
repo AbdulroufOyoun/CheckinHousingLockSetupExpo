@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 
 import { Button } from '@/src/components/ui/Button';
 import { formatUserErrorMessage } from '@/src/api/formatApiError';
+import { ensureBleReady } from '@/src/ble/bleReady';
 import {
   ScannedLock,
   initLockFromScan,
@@ -12,7 +13,6 @@ import {
   startScan,
   stopScan,
 } from '@/src/ble/ttlockBridge';
-import { ensureBlePermissions } from '@/src/ble/permissions';
 import { colors } from '@/src/theme/colors';
 import { radii, spacing } from '@/src/theme/tokens';
 
@@ -30,9 +30,10 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
 
   const runScan = useCallback(async () => {
     setError(null);
-    const ok = await ensureBlePermissions();
-    if (!ok) {
-      setError(t('blePermissionsRequired'));
+    try {
+      await ensureBleReady();
+    } catch (e) {
+      setError(formatUserErrorMessage(e, t));
       return;
     }
     setDevices([]);
@@ -43,7 +44,7 @@ export function ScanLocksPanel({ onInitialized, autoStart }: Props) {
         return [...prev, device];
       });
     });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (autoStart) {

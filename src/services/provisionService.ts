@@ -11,7 +11,10 @@ export type RegisterLockPayload = {
   electric_quantity: number;
 };
 
-/** Register in tenant DB only (BLE lockData). No TTLock cloud initialize. */
+/**
+ * Register after BLE init. Sends plaintext lock_data; server resolves a real
+ * TTLock cloud lockId when cloud is enabled (falls back to local:{MAC}).
+ */
 export function buildRegisterPayload(
   lockAlias: string,
   lockData: string,

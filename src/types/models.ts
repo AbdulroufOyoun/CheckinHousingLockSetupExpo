@@ -188,6 +188,42 @@ export interface LockLinkTimelineEntry {
   occurred_at: string;
 }
 
+export interface PasscodeAssigneeUser {
+  id: number;
+  name?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+}
+
+export interface LockPasscodeRecord {
+  id: number;
+  lock_id: number;
+  room_id?: number | null;
+  booking_id?: number | null;
+  assigned_user_id?: number | null;
+  assigned_user?: PasscodeAssigneeUser | null;
+  keyboard_pwd: string;
+  keyboard_pwd_id?: number | null;
+  keyboard_pwd_name?: string | null;
+  keyboard_pwd_type: number;
+  start_date: number;
+  end_date: number;
+  source: string;
+  add_type?: number | null;
+  status: string;
+  is_expired?: boolean;
+  lock?: {
+    id: number;
+    lockAlias?: string;
+    lockName?: string;
+    lockMac?: string;
+    lockId?: string;
+    vendor?: string;
+  } | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface PropertyDetailContext {
   id: number;
   number?: string;
