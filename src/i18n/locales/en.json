@@ -6,7 +6,7 @@
   "blePermissionsRequired": "Bluetooth and location permissions are required to scan and program locks.",
   "bleOff": "Bluetooth is turned off. Turn on Bluetooth and try again.",
   "bleUnsupported": "This device does not support Bluetooth needed for lock operations.",
-  "bleConnectTimeout": "Could not connect to the lock over Bluetooth. Stand within 1 m, wake the lock (touch the keypad), keep scanning, then try again. For locks already on TTLock cloud use Link existing — not Program new.",
+  "bleConnectTimeout": "Could not connect over Bluetooth (or TTLock SDK was not initialized). Stay within 1 m, turn Bluetooth on, wake the lock, then retry. If it persists after updating the app: clear app cache or reinstall.",
   "bleConnectTimeoutProvision": "Bluetooth step failed while programming the lock (not the server). Stay within 1 m, wake the lock, tap Initialize again. If the lock is already on TTLock cloud, cancel and use Link existing on the room/unit.",
   "lockNotInSettingMode": "This lock is already initialized. Use Link existing on the room/unit, or reset the lock hardware to enter setup mode.",
   "lockUseLinkExisting": "Use Link existing",

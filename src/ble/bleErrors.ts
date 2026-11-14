@@ -1,7 +1,13 @@
 /** Maps TTLock SDK / bridge errors to i18n keys (pass to t()). */
 export function bleErrorI18nKey(message: string): string | null {
   const m = message.toLowerCase();
-  if (m === 'ble_off' || m.includes('bluetooth is disable') || m.includes('bluetooth is off')) {
+  // Exact SDK wording is often "ttlock not init or bluetooth is disable" — that is
+  // usually missing prepareBTService, not the radio switch. Map only clear "off" cases here.
+  if (
+    m === 'ble_off' ||
+    m.includes('bluetooth is off') ||
+    (m.includes('bluetooth is disable') && !m.includes('not init'))
+  ) {
     return 'bleOff';
   }
   if (m === 'ble_unsupported' || m.includes('unsupported bluetooth')) {

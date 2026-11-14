@@ -1,8 +1,56 @@
 diff --git a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
-index 6e3b4db..f5a5dfc 100644
+index 6e3b4db..fd1048c 100644
 --- a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
 +++ b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
-@@ -773,16 +773,22 @@ public class TtlockModule extends NativeTtlockSpec {
+@@ -204,20 +204,28 @@ public class TtlockModule extends NativeTtlockSpec {
+     public TtlockModule(ReactApplicationContext reactContext) {
+         super(reactContext);
+         this.reactContext = reactContext;
+-//        initSDK();
+         LogUtil.setDBG(true);
++        // Defer until an Activity exists — prepareBTService is required before scan/control.
++        new Handler(Looper.getMainLooper()).postDelayed(this::ensureBtServicePrepared, 200);
+     }
+ 
+-//    private void initSDK() {
+-//      new Handler(Looper.getMainLooper()).postDelayed(() -> {
+-//        Activity activity = getCurrentActivity();
+-//        Log.e("tag", "activity:" + activity);
+-//        TTLockClient.getDefault().prepareBTService(activity);
+-//        RemoteClient.getDefault().prepareBTService(activity);
+-//        WirelessDoorSensorClient.getDefault().prepareBTService(activity);
+-//        GatewayClient.getDefault().prepareBTService(activity);
+-//      }, 200);
+-//    }
++    /**
++     * TTLock Android SDK: prepareBTService must run first or APIs fail with
++     * "ttlock not init or bluetooth is disable" (common in release/production builds).
++     */
++    private void ensureBtServicePrepared() {
++        Activity activity = getCurrentActivity();
++        android.content.Context context = activity != null
++            ? activity.getApplicationContext()
++            : reactContext.getApplicationContext();
++        if (context == null) {
++            return;
++        }
++        TTLockClient.getDefault().prepareBTService(context);
++        RemoteClient.getDefault().prepareBTService(context);
++        WirelessDoorSensorClient.getDefault().prepareBTService(context);
++        GatewayClient.getDefault().prepareBTService(context);
++    }
+ 
+     @Override
+     public String getName() {
+@@ -715,6 +723,7 @@ public class TtlockModule extends NativeTtlockSpec {
+     public void startScan() {
+ //        scanGateway = false;
+         scanType = TYPE_LOCK;
++        ensureBtServicePrepared();
+         PermissionUtils.doWithScanPermission(getCurrentActivity(), success -> {
+           if (success) {
+             TTLockClient.getDefault().startScanLock(new ScanLockCallback() {
+@@ -773,16 +782,22 @@ public class TtlockModule extends NativeTtlockSpec {
                  device.setManufacturerId(clientPara);
              }
          }
@@ -32,3 +80,11 @@ index 6e3b4db..f5a5dfc 100644
          });
      }
  
+@@ -842,6 +857,7 @@ public class TtlockModule extends NativeTtlockSpec {
+             lockErrorCallback(LockError.DATA_FORMAT_ERROR, fail);
+             return;
+         }
++        ensureBtServicePrepared();
+         PermissionUtils.doWithConnectPermission(getCurrentActivity(), success -> {
+           if (success) {
+             TTLockClient.getDefault().controlLock(RNControlAction.RN2Native(controlAction), lockData, null, new ControlLockCallback() {

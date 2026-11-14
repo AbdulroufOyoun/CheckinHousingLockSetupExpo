@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: false,
   name: 'Checkin Lock Setup',
   slug: 'checkinhousing-lock-setup',
-  version: '1.0.17',
+  version: '1.0.19',
   orientation: 'default',
   scheme: 'checkin-lock-setup',
   userInterfaceStyle: 'dark',
@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    versionCode: 20,
+    versionCode: 22,
     softwareKeyboardLayoutMode: 'resize',
     package: 'com.checkinhousing.locksetup',
     adaptiveIcon: {
@@ -73,6 +73,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           minSdkVersion: 24,
           // react-native-ttlock is not New Architecture–ready (expo-doctor / Gradle on EAS).
           newArchEnabled: false,
+          // TTLock docs: minify/R8 in release breaks the native SDK ("not init / bluetooth disable").
+          enableMinifyInReleaseBuilds: false,
+          enableShrinkResourcesInReleaseBuilds: false,
         },
       },
     ],
