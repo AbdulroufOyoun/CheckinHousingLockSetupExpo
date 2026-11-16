@@ -18,6 +18,7 @@ import {
 } from '@/src/api/lockSetupClient';
 import { setApiBaseOverride } from '@/src/config/apiBaseOverride';
 import { normalizeApiRoot } from '@/src/config/env';
+import { PRODUCTION_API_BASE } from '@/src/config/projectDefaults';
 import { initI18n } from '@/src/i18n';
 import { colors } from '@/src/theme/colors';
 import { clearTenantCaches } from '@/src/services/tenantCache';
@@ -107,8 +108,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           SecureStore.getItemAsync(KEYS.lang),
           SecureStore.getItemAsync(KEYS.apiBase),
         ]);
+        // Saved override wins, except in __DEV__ when it still points at production
+        // while Metro/.env set a local EXPO_PUBLIC_API_BASE — migrate to local.
+        const fromEnv = process.env.EXPO_PUBLIC_API_BASE?.trim();
         if (apiBase) {
-          setApiBaseOverride(normalizeApiRoot(apiBase));
+          const saved = normalizeApiRoot(apiBase);
+          const prod = normalizeApiRoot(PRODUCTION_API_BASE);
+          if (__DEV__ && fromEnv && saved === prod) {
+            const local = normalizeApiRoot(fromEnv);
+            setApiBaseOverride(local);
+            await SecureStore.setItemAsync(KEYS.apiBase, local);
+          } else {
+            setApiBaseOverride(saved);
+          }
+        } else if (__DEV__ && fromEnv) {
+          setApiBaseOverride(normalizeApiRoot(fromEnv));
         }
         await initI18n(lang ?? undefined);
         if (token) {

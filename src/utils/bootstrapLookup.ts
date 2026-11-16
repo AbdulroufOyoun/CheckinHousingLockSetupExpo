@@ -22,6 +22,50 @@ export function findRoom(data: BootstrapData | undefined, id: number): RoomModel
   return data.rooms.find((r) => r.id === id);
 }
 
+/** Collect every room whose `number` matches exactly (string compare). */
+export function findRoomsByNumber(
+  data: BootstrapData | undefined,
+  roomNumber: string,
+): RoomModel[] {
+  if (!data) return [];
+  const target = roomNumber.trim();
+  if (!target) return [];
+
+  const seen = new Set<number>();
+  const out: RoomModel[] = [];
+  const push = (room: RoomModel) => {
+    if (seen.has(room.id)) return;
+    if (String(room.number ?? '').trim() !== target) return;
+    seen.add(room.id);
+    out.push(room);
+  };
+
+  for (const floor of data.floors) {
+    for (const room of floor.rooms) {
+      push(room);
+    }
+    for (const suite of floor.suites) {
+      for (const room of suite.rooms) {
+        push(room);
+      }
+    }
+  }
+  for (const room of data.rooms) {
+    push(room);
+  }
+  return out;
+}
+
+/** Prefer a room that already has a linked lock. */
+export function pickRoomForSilentUnlock(
+  data: BootstrapData | undefined,
+  roomNumber: string,
+): RoomModel | undefined {
+  const matches = findRoomsByNumber(data, roomNumber);
+  if (matches.length === 0) return undefined;
+  return matches.find((r) => r.has_lock || (r.locks?.length ?? 0) > 0) ?? matches[0];
+}
+
 export function findSuite(data: BootstrapData | undefined, id: number): SuiteModel | undefined {
   if (!data) return undefined;
   for (const floor of data.floors) {

@@ -216,7 +216,7 @@ export function formatUserErrorMessage(
   if (e instanceof UnlockError) {
     const d = { ...e.diagnostic, hint: hintForDiagnostic(e.diagnostic, t) };
     const block = formatUnlockDiagnosticBlock(d, t);
-    const headline = e.message.trim() || t('errorGeneric');
+    const headline = formatBleUserMessage(e.message.trim(), t) || t('errorGeneric');
     return `${headline}\n\n${block}`;
   }
 

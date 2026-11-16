@@ -18,6 +18,7 @@ import { fetchTenants } from '@/src/api/lockSetupClient';
 import { Screen } from '@/src/components/ui/Screen';
 import { TextField } from '@/src/components/ui/TextField';
 import { useResponsiveLayout } from '@/src/hooks/useResponsiveLayout';
+import { resumePendingDeepLink } from '@/src/services/resumePendingDeepLink';
 import { useSession } from '@/src/store/session';
 import { colors } from '@/src/theme/colors';
 import { elevation, radii, spacing, typography } from '@/src/theme/tokens';
@@ -85,7 +86,7 @@ export default function TenantsScreen() {
                 onPress={async () => {
                   void Haptics.selectionAsync();
                   await selectTenant(item.id, item.domain);
-                  router.replace('/(setup)/(tabs)/property');
+                  await resumePendingDeepLink('/(setup)/(tabs)/property');
                 }}
               >
                 <View style={styles.iconWrap}>

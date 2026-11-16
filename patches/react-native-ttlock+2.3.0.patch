@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
-index 6e3b4db..fd1048c 100644
+index 6e3b4db..d48232b 100644
 --- a/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
 +++ b/node_modules/react-native-ttlock/android/src/main/java/com/ttlock/TtlockModule.java
-@@ -204,20 +204,28 @@ public class TtlockModule extends NativeTtlockSpec {
+@@ -204,20 +204,59 @@ public class TtlockModule extends NativeTtlockSpec {
      public TtlockModule(ReactApplicationContext reactContext) {
          super(reactContext);
          this.reactContext = reactContext;
@@ -26,7 +26,14 @@ index 6e3b4db..fd1048c 100644
 +     * TTLock Android SDK: prepareBTService must run first or APIs fail with
 +     * "ttlock not init or bluetooth is disable" (common in release/production builds).
 +     */
++    private static volatile boolean btServicePrepared = false;
++
 +    private void ensureBtServicePrepared() {
++        // Once only: prepareBTService replaces the SDK's Handler on every call, which
++        // orphans a pending connect-timeout timer that then kills a later connection.
++        if (btServicePrepared) {
++            return;
++        }
 +        Activity activity = getCurrentActivity();
 +        android.content.Context context = activity != null
 +            ? activity.getApplicationContext()
@@ -38,11 +45,35 @@ index 6e3b4db..fd1048c 100644
 +        RemoteClient.getDefault().prepareBTService(context);
 +        WirelessDoorSensorClient.getDefault().prepareBTService(context);
 +        GatewayClient.getDefault().prepareBTService(context);
++        btServicePrepared = true;
++    }
++
++    /**
++     * The SDK retries a connection that drops right away (Android GATT 133) up to 3 times,
++     * but it never re-arms that retry: after the first successful connection of the process
++     * every such drop surfaces as "connect timeout". Re-arm it before each lock command.
++     * BluetoothImpl is package-private, hence reflection; failure here is harmless.
++     */
++    private void rearmSdkReconnect() {
++        try {
++            Class<?> impl = Class.forName("com.ttlock.bl.sdk.api.BluetoothImpl");
++            java.lang.reflect.Method getInstance = impl.getDeclaredMethod("getInstance");
++            getInstance.setAccessible(true);
++            Object instance = getInstance.invoke(null);
++            java.lang.reflect.Method setNeedReCon = impl.getDeclaredMethod("setNeedReCon", boolean.class);
++            setNeedReCon.setAccessible(true);
++            setNeedReCon.invoke(instance, true);
++            java.lang.reflect.Method setConnectCnt = impl.getDeclaredMethod("setConnectCnt", int.class);
++            setConnectCnt.setAccessible(true);
++            setConnectCnt.invoke(instance, 0);
++        } catch (Throwable t) {
++            Log.w("Ttlock", "rearmSdkReconnect skipped: " + t);
++        }
 +    }
  
      @Override
      public String getName() {
-@@ -715,6 +723,7 @@ public class TtlockModule extends NativeTtlockSpec {
+@@ -715,6 +754,7 @@ public class TtlockModule extends NativeTtlockSpec {
      public void startScan() {
  //        scanGateway = false;
          scanType = TYPE_LOCK;
@@ -50,7 +81,7 @@ index 6e3b4db..fd1048c 100644
          PermissionUtils.doWithScanPermission(getCurrentActivity(), success -> {
            if (success) {
              TTLockClient.getDefault().startScanLock(new ScanLockCallback() {
-@@ -773,16 +782,22 @@ public class TtlockModule extends NativeTtlockSpec {
+@@ -773,16 +813,22 @@ public class TtlockModule extends NativeTtlockSpec {
                  device.setManufacturerId(clientPara);
              }
          }
@@ -80,11 +111,30 @@ index 6e3b4db..fd1048c 100644
          });
      }
  
-@@ -842,6 +857,7 @@ public class TtlockModule extends NativeTtlockSpec {
+@@ -842,8 +888,10 @@ public class TtlockModule extends NativeTtlockSpec {
              lockErrorCallback(LockError.DATA_FORMAT_ERROR, fail);
              return;
          }
 +        ensureBtServicePrepared();
          PermissionUtils.doWithConnectPermission(getCurrentActivity(), success -> {
            if (success) {
++            rearmSdkReconnect();
              TTLockClient.getDefault().controlLock(RNControlAction.RN2Native(controlAction), lockData, null, new ControlLockCallback() {
+               @Override
+               public void onControlLockSuccess(ControlLockResult controlLockResult) {
+@@ -875,6 +923,7 @@ public class TtlockModule extends NativeTtlockSpec {
+         LogUtil.d("startDate:" + startDate);
+         PermissionUtils.doWithConnectPermission(getCurrentActivity(), success -> {
+           if (success) {
++            rearmSdkReconnect();
+             TTLockClient.getDefault().createCustomPasscode(passcode, (long)startDate, (long)endDate, lockData, null, new CreateCustomPasscodeCallback() {
+               @Override
+               public void onCreateCustomPasscodeSuccess(String passcode) {
+@@ -967,6 +1016,7 @@ public class TtlockModule extends NativeTtlockSpec {
+         }
+         PermissionUtils.doWithConnectPermission(getCurrentActivity(), success -> {
+           if (success) {
++            rearmSdkReconnect();
+             TTLockClient.getDefault().resetPasscode(lockData, null, new ResetPasscodeCallback() {
+               @Override
+               public void onResetPasscodeSuccess(String lockData) {

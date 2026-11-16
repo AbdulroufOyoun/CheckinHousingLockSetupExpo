@@ -49,9 +49,10 @@ const extraArgs = process.argv.slice(2);
 const port = await pickPort(8081);
 
 process.env.REACT_NATIVE_PACKAGER_HOSTNAME = host;
-// Never bake a teammate's LAN IP into the API default — production is the shared default.
+// Local API for physical phones on the same LAN (artisan serve / Herd on :8000).
+// Override with EXPO_PUBLIC_API_BASE in .env.local or the shell when needed.
 if (!process.env.EXPO_PUBLIC_API_BASE?.trim()) {
-  process.env.EXPO_PUBLIC_API_BASE = 'https://checkin-api.learnnowsyria.com';
+  process.env.EXPO_PUBLIC_API_BASE = `http://${host}:8000`;
 }
 
 console.log(`[start-dev-client] LAN ${host}:${port}`);

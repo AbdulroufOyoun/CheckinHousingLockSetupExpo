@@ -7,6 +7,7 @@
   "bleOff": "Bluetooth is turned off. Turn on Bluetooth and try again.",
   "bleUnsupported": "This device does not support Bluetooth needed for lock operations.",
   "bleConnectTimeout": "Could not connect over Bluetooth (or TTLock SDK was not initialized). Stay within 1 m, turn Bluetooth on, wake the lock, then retry. If it persists after updating the app: clear app cache or reinstall.",
+  "bleLockNotSeen": "Could not pick up the lock's Bluetooth signal. Move within 1 m, touch the lock keypad so it lights up, then try again.",
   "bleConnectTimeoutProvision": "Bluetooth step failed while programming the lock (not the server). Stay within 1 m, wake the lock, tap Initialize again. If the lock is already on TTLock cloud, cancel and use Link existing on the room/unit.",
   "lockNotInSettingMode": "This lock is already initialized. Use Link existing on the room/unit, or reset the lock hardware to enter setup mode.",
   "lockUseLinkExisting": "Use Link existing",
@@ -125,6 +126,11 @@
   "unlockDiag_chars": "chars",
   "unlockDiag_local": "phone",
   "unlockDiag_server": "server",
+  "unlockDiag_ble": "Bluetooth",
+  "unlockDiag_bleSeen": "lock seen",
+  "unlockDiag_bleNotSeen": "lock not seen",
+  "unlockDiagHintLockNotSeen": "The lock never showed up in the scan: it is likely asleep, too far, or low on battery. Touch the keypad to wake it and move the phone closer.",
+  "unlockDiagHintBleConnect": "The lock was seen but the connection failed after several attempts. Touch the keypad, move closer, and if it repeats: toggle Bluetooth off/on and check the lock battery.",
   "unlockDiagHintNoWireKey": "Wire key missing in app. Add EXPO_PUBLIC_LOCK_DATA_WIRE_KEY to .env.local, run npx expo start -c, or install a new APK with EAS.",
   "unlockDiagHintStillEncrypted": "Data still encrypted (ldw1/lds1). Check wire key OK, lock db id, and app 1.0.8+.",
   "unlockDiagHintBadLength": "Unexpected lockData length. Pull to refresh bootstrap or re-link the lock.",
@@ -212,5 +218,12 @@
   "saltoInstallationId": "Salto installation ID",
   "saltoDoorId": "Salto door ID",
   "lockAlias": "Lock label",
-  "loadSaltoDoors": "Load doors from Salto"
+  "loadSaltoDoors": "Load doors from Salto",
+  "deepLinkUnlocking": "Unlocking room {{room}}…",
+  "deepLinkUnlockHint": "Hold the phone near the lock",
+  "deepLinkUnlockDone": "Room {{room}} unlocked",
+  "deepLinkUnlockFailed": "Could not unlock",
+  "deepLinkMissingRoom": "Missing room number in link",
+  "deepLinkRoomNotFound": "No room numbered {{room}} in this property",
+  "deepLinkNoLock": "Room {{room}} has no linked lock"
 }

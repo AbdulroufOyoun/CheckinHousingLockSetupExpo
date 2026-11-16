@@ -1,7 +1,7 @@
 import { Alert, Clipboard } from 'react-native';
 
 import { fetchLockDetail } from '@/src/api/lockSetupClient';
-import { controlUnlock } from '@/src/ble/ttlockBridge';
+import { BleOpError, controlUnlock } from '@/src/ble/ttlockBridge';
 import { resolveApiLockData } from '@/src/crypto/lockDataWire';
 import i18n from '@/src/i18n';
 import type { CloudLock } from '@/src/types/models';
@@ -88,7 +88,15 @@ async function lockWithFreshApiData(apiLock: CloudLock): Promise<CloudLock> {
   return apiLock;
 }
 
-export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<void> {
+export type UnlockWithLockOptions = {
+  /** Skip the __DEV__ plaintext confirm dialog (deep-link auto unlock). */
+  silent?: boolean;
+};
+
+export async function unlockWithLock(
+  apiLock: CloudLock | undefined,
+  options: UnlockWithLockOptions = {},
+): Promise<void> {
   if (!apiLock) {
     throw new Error('No lock linked');
   }
@@ -137,8 +145,8 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
     throw new UnlockError(`lockData length ${lockData.length} looks invalid`, diagnostic);
   }
 
-  // Debug-only: show/copy plaintext before BLE unlock. Production unlocks immediately.
-  if (__DEV__) {
+  // Debug-only: show/copy plaintext before BLE unlock. Silent path skips this.
+  if (__DEV__ && !options.silent) {
     await confirmDecryptedLockData(lockData);
   }
 
@@ -148,7 +156,8 @@ export async function unlockWithLock(apiLock: CloudLock | undefined): Promise<vo
     await controlUnlock(lockData, resolvedLock.lockMac);
   } catch (e) {
     const nativeMessage = e instanceof Error ? e.message : String(e);
-    throw new UnlockError(nativeMessage, { ...diagnostic, nativeMessage });
+    const ble = e instanceof BleOpError ? e.stats : undefined;
+    throw new UnlockError(nativeMessage, { ...diagnostic, nativeMessage, ble });
   }
 }
 

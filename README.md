@@ -43,6 +43,26 @@ eas build --profile development --platform android
 
 ---
 
+## Deep link: فتح قفل غرفة
+
+Scheme: `checkin-lock-setup` (مُعرّف في `app.config.ts`).
+
+```
+checkin-lock-setup://unlock/201
+```
+
+يفتح شاشة تحميل، يجلب قفل الغرفة من الـ bootstrap للمستأجر الحالي، يفك التشفير، ويفتح الباب عبر BLE بدون أزرار. إذا المستخدم غير مسجّل أو بدون مستأجر، يُحفظ المسار ويُستأنف بعد login / اختيار tenant.
+
+اختبار من الكمبيوتر (جهاز متصل بـ adb، التطبيق مثبت):
+
+```bash
+adb shell am start -a android.intent.action.VIEW -d "checkin-lock-setup://unlock/201"
+```
+
+بدّل `201` برقم غرفة موجود وعليه قفل، مع جلسة مسجّلة وبلوتوث قريب من القفل.
+
+---
+
 ## Backend
 
 [CheckinAccess](https://github.com/AbdulroufOyoun/CheckinAccess) — `api/lock-setup/*` على السيرفر المركزي.

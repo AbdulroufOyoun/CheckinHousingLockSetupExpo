@@ -7,6 +7,7 @@
   "bleOff": "البلوتوث مطفي. فعّل البلوتوث ثم أعد المحاولة.",
   "bleUnsupported": "هالجهاز ما بيدعم البلوتوث اللازم لعمليات القفل.",
   "bleConnectTimeout": "تعذّر الاتصال بالقفل عبر البلوتوث (أو SDK غير مهيأ). اقترب أقل من متر، فعّل البلوتوث والقفل، وأعد المحاولة. إذا استمر الخطأ بعد تحديث التطبيق: امسح كاش التطبيق أو أعد تثبيته.",
+  "bleLockNotSeen": "ما قدرنا نلقط إشارة القفل. قرّب لأقل من متر، المس لوحة أرقام القفل لحتى تضوّي، وجرّب مرة تانية.",
   "bleConnectTimeoutProvision": "فشل الاتصال بالبلوتوث أثناء برمجة القفل (ليس السيرفر). ابقَ قريباً (< متر)، فعّل القفل، وأعد «تهيئة». إذا القفل على السحابة مسبقاً ألغِ واستخدم «ربط قفل موجود» من الغرفة.",
   "lockNotInSettingMode": "القفل مبرمج مسبقاً. من الغرفة/الوحدة اختر «ربط قفل موجود»، أو أعد ضبط القفل من المصنع لدخول وضع الإعداد.",
   "lockUseLinkExisting": "ربط موجود",
@@ -125,6 +126,11 @@
   "unlockDiag_chars": "حرف",
   "unlockDiag_local": "الجوال",
   "unlockDiag_server": "السيرفر",
+  "unlockDiag_ble": "البلوتوث",
+  "unlockDiag_bleSeen": "القفل ظاهر",
+  "unlockDiag_bleNotSeen": "القفل غير ظاهر",
+  "unlockDiagHintLockNotSeen": "القفل ما ظهر بالبحث: غالباً نايم أو بعيد أو بطاريته ضعيفة. المس لوحة الأرقام لتصحّيه وقرّب الجوال.",
+  "unlockDiagHintBleConnect": "القفل ظاهر بس الاتصال فشل بعد كذا محاولة. المس لوحة الأرقام، قرّب الجوال، وإذا تكرّر: طفّي البلوتوث وشغّله وافحص بطارية القفل.",
   "unlockDiagHintNoWireKey": "المفتاح غير موجود في التطبيق. أضف EXPO_PUBLIC_LOCK_DATA_WIRE_KEY في .env.local ثم npx expo start -c أو ثبّت APK جديد مع EAS.",
   "unlockDiagHintStillEncrypted": "البيانات ما زالت مشفّرة (ldw1/lds1). تأكد wire key OK، db id صحيح، ونسخة التطبيق 1.0.8+.",
   "unlockDiagHintBadLength": "طول lockData غير متوقع. اسحب للتحديث (bootstrap) أو أعد ربط القفل.",
@@ -212,5 +218,12 @@
   "saltoInstallationId": "معرّف التثبيت Salto",
   "saltoDoorId": "معرّف الباب",
   "lockAlias": "اسم القفل",
-  "loadSaltoDoors": "تحميل الأبواب من Salto"
+  "loadSaltoDoors": "تحميل الأبواب من Salto",
+  "deepLinkUnlocking": "جاري فتح غرفة {{room}}…",
+  "deepLinkUnlockHint": "قرّب الهاتف من القفل",
+  "deepLinkUnlockDone": "تم فتح غرفة {{room}}",
+  "deepLinkUnlockFailed": "تعذّر فتح الباب",
+  "deepLinkMissingRoom": "رابط بدون رقم غرفة",
+  "deepLinkRoomNotFound": "لا توجد غرفة برقم {{room}} في هذا العقار",
+  "deepLinkNoLock": "الغرفة {{room}} بدون قفل مربوط"
 }

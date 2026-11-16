@@ -13,8 +13,12 @@ export function bleErrorI18nKey(message: string): string | null {
   if (m === 'ble_unsupported' || m.includes('unsupported bluetooth')) {
     return 'bleUnsupported';
   }
+  if (m === 'ble_lock_not_seen') {
+    return 'bleLockNotSeen';
+  }
   if (
     m.includes('connect timeout') ||
+    m.includes('connect time out') ||
     m.includes('connection disconnected') ||
     m.includes('connect fail') ||
     m === 'ble_passcode_timeout' ||

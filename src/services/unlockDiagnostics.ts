@@ -3,6 +3,8 @@ import type { TFunction } from 'i18next';
 
 import { lockDataSha256Prefix } from '@/src/crypto/lockDataFingerprint';
 import { hasWireLockDataKeyConfigured } from '@/src/crypto/lockDataWire';
+import { isBleConnectTimeoutError } from '@/src/ble/bleErrors';
+import type { BleOpStats } from '@/src/ble/ttlockBridge';
 import { getApiBase } from '@/src/config/env';
 import type { CloudLock } from '@/src/types/models';
 
@@ -46,6 +48,8 @@ export type UnlockDiagnostic = {
   serverSha256Prefix?: string;
   localSha256Prefix?: string;
   sha256Match?: boolean;
+  /** Radio facts from the BLE attempt(s): how many tries, whether the lock was seen advertising. */
+  ble?: BleOpStats;
 };
 
 export function buildUnlockDiagnostic(
@@ -120,6 +124,15 @@ export function formatUnlockDiagnosticBlock(d: UnlockDiagnostic, t: TFunction): 
             : ''
         }`
       : null,
+    d.ble
+      ? `— ${formatLabel(t, 'ble')}: ${d.ble.attempts}x · ${Math.round(d.ble.elapsedMs / 1000)}s · ${
+          d.ble.sighted === true
+            ? formatLabel(t, 'bleSeen')
+            : d.ble.sighted === false
+              ? formatLabel(t, 'bleNotSeen')
+              : '—'
+        }${d.ble.scanSkipped ? ` (${d.ble.scanSkipped})` : ''}`
+      : null,
     d.hint ? `\n${d.hint}` : null,
     d.nativeMessage ? `\nTTLock: ${d.nativeMessage}` : null,
   ].filter(Boolean);
@@ -136,6 +149,13 @@ export function hintForDiagnostic(d: UnlockDiagnostic, t: TFunction): string {
   }
   if (d.resolvedFormat === 'unknown' || d.resolvedLen < 80) {
     return t('unlockDiagHintBadLength');
+  }
+  if (d.stage === 'ttlock' && d.nativeMessage === 'BLE_LOCK_NOT_SEEN') {
+    return t('unlockDiagHintLockNotSeen');
+  }
+  if (d.stage === 'ttlock' && d.nativeMessage && isBleConnectTimeoutError(d.nativeMessage)) {
+    // Radio problem, not a lockData problem — do not send the user to re-provision.
+    return t('unlockDiagHintBleConnect');
   }
   if (d.stage === 'ttlock' && d.resolvedFormat === 'plain') {
     if (d.sha256Match === true) {

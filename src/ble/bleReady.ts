@@ -36,6 +36,7 @@ export function isBleRetryableError(message: string): boolean {
     m === 'ble_passcode_timeout' ||
     m.includes('ble_passcode_timeout') ||
     m.includes('connect timeout') ||
+    m.includes('connect time out') ||
     m.includes('connection disconnected') ||
     m.includes('disconnected') ||
     m.includes('connect fail') ||

@@ -91,6 +91,7 @@ export default function LoginScreen() {
         ...(isEmail ? { email: trimmed } : { mobile: normalizeMobileInput(trimmed) }),
       });
       await signIn(data.token);
+      // Tenant is cleared on sign-in; always pick tenant next (pending unlock resumes after).
       router.replace('/(setup)/tenants');
     } catch (e) {
       setError(formatUserErrorMessage(e, t, 'login'));
